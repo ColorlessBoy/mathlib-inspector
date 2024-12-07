@@ -25,7 +25,7 @@ jobs:
           find ./.lake/packages/mathlib -name "*.olean"
           export LEAN_PATH="./.lake/packages/mathlib/.lake/build/lib:./.lake/build/lib"
           lake build
-          lake env lean --run MathlibInspector.lean thms.txt thms 0 -1 2048 100000
+          lake env lean --run MathlibInspector.lean thms.txt thms 0 0 2048 100000
 
       - name: Set up Python
         uses: actions/setup-python@v4
