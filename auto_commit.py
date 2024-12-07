@@ -27,7 +27,7 @@ def get_huggingface_ranges():
     # 用于存放解析后的结果
     parsed_numbers = []
     # 正则表达式匹配模式
-    pattern = r"theorems-(\d+)-(\d+)\.zip"
+    pattern = r"output-(\d+)-(\d+)\.zip"
     
     # 遍历文件名并解析
     for file_name in file_names:
@@ -169,6 +169,8 @@ def find_missing_ranges(finished_ranges, in_progress_ranges, total_length, incre
 
 if __name__ == "__main__":
     # 默认参数
+    load_dotenv()
+
     DEFAULT_INCREMENT = 4096
     DEFAULT_VERSION = "v0.0.1"
 
@@ -190,7 +192,7 @@ if __name__ == "__main__":
                 print(len(in_progress_ranges))
                 for start, end in tqdm(next_ranges[:20 - len(in_progress_ranges)], desc="Committing"):
                     run_commit(start, end, version_prefix)
-            sleep_time = 10 * 60
+            sleep_time = 5 * 60
         except Exception as e:
             print(e)
             sleep_time = 1 * 60
