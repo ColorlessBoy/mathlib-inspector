@@ -62,11 +62,17 @@ def load_zip_file(filename: str):
 
 folder_path = load_zip_file(zip_files[0])  
 
-def load_thm_files():
+def load_thm_list():
   print("开始加载thms.txt...")
-  with open("thms.txt", "r") as f:
-    thms = [line.strip() for line in f.readlines()]
+  with open("output/hashed_consts.txt", "r") as f:
+    thms = {}
+    for line in f.readlines():
+      k, v = line.strip().split('\t')
+      thms[k] = v
   print("成功加载thms.txt")
   return thms
 
-thms = load_thm_files()
+thms = load_thm_list()
+print(len(thms))
+k = "Ad1041480902"
+print(k, thms[k])

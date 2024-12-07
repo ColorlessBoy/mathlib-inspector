@@ -118,6 +118,12 @@ if __name__ == "__main__":
 
   if args.generate:
     run_lean_script(thmsfile_path, output_dir, start_of_index, end_of_index)
+  
+  with open("thms.txt", 'r') as f:
+    thms_total_num = len(f.readlines())
+  
+  if end_of_index is None or end_of_index <= start_of_index:
+    end_of_index = thms_total_num
 
   # zip output_dir
   output_zip = output_dir + '-' + str(start_of_index) + '-' + str(end_of_index) + ".zip"

@@ -11,13 +11,8 @@ open Lean Meta
 -- #eval saveMathThmListToFile "maththms.txt"
 -- #eval saveConstListToFile "consts.txt"
 -- #eval saveThmListToFile "thms.txt"
-#eval saveConstAndSizeToFile "constAndSize.txt" 2048 100000
+-- #eval saveConstAndSizeToFile "constAndSize.txt" 2048 100000
 
-#eval printConstantDetails `AlgebraicGeometry.PresheafedSpace.GlueData.opensImagePreimageMap.proof_1
-#eval printConstantDetails `AlgebraicGeometry.PresheafedSpace.GlueData.opensImagePreimageMap_app_assoc
-
-#eval (parseName "Mathlib.Geometry.Manifold.PartitionOfUnity._auxLemma.16").toString
-#eval printConstantDetailsV2 "Mathlib.Geometry.Manifold.PartitionOfUnity._auxLemma.16"
 #eval printConstantDetails `eq_iff_eq_cancel_left
 
 #check @Prod
@@ -48,7 +43,6 @@ def e1 : ∃ x : Nat, x > 0 :=
 #check @LT.lt
 #eval printConstantDetails `LT.lt
 
-#eval toPrefixExpr (Expr.lit (Literal.natVal 0))
 
 #check Expr.lit
 #check @Literal.natVal
