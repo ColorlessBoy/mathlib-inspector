@@ -25,7 +25,7 @@ jobs:
           find ./.lake/packages/mathlib -name "*.olean"
           export LEAN_PATH="./.lake/packages/mathlib/.lake/build/lib:./.lake/build/lib"
           lake build
-          lake env lean --run MathlibInspector.lean thms.txt output 192512 196608 2048 100000
+          lake env lean --run MathlibInspector.lean thms.txt output 196608 200704 2048 100000
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -45,4 +45,4 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}  # 从 GitHub Secrets 获取 Hugging Face token
         run: |
-          poetry run python extract_thms.py -t thms.txt -o output -d colorlessboy/mathlib4-thms -s 192512 -e 196608
+          poetry run python extract_thms.py -t thms.txt -o output -d colorlessboy/mathlib4-thms -s 196608 -e 200704
