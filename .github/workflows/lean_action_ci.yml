@@ -1,0 +1,48 @@
+name: Lean Action CI
+
+on:
+  push:
+    tags:
+      - 'v*'  # 触发条件：每次推送带 v* 格式的标签时触发
+
+jobs:
+  build:
+    environment: production # 指定使用的环境
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lean 4 and Lake and Generate Theorems
+        run: |
+          wget -q https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh
+          bash elan-init.sh -y
+          source ~/.elan/env
+          elan default leanprover/lean4:stable
+          lean --version
+          lake --version
+          lake exe cache get
+          lake update
+          find ./.lake/packages/mathlib -name "*.olean"
+          export LEAN_PATH="./.lake/packages/mathlib/.lake/build/lib:./.lake/build/lib"
+          lake build
+          lake env lean --run MathlibInspector.lean thms.txt output 77824 81920 2048 100000
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12.6'  # 使用适当的 Python 版本
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo 'export PATH="$HOME/.local/bin:$PATH"' >> $GITHUB_ENV  # 添加 Poetry 到 PATH 环境变量
+
+      - name: Install dependencies with Poetry
+        run: |
+          poetry install  # 安装依赖
+
+      - name: Upload to Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}  # 从 GitHub Secrets 获取 Hugging Face token
+        run: |
+          poetry run python extract_thms.py -t thms.txt -o output -d colorlessboy/mathlib4-thms -s 77824 -e 81920

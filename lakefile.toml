@@ -1,0 +1,19 @@
+name = "mathlib-inspector"
+version = "0.1.0"
+keywords = ["math"]
+defaultTargets = ["MathlibInspector"]
+
+[leanOptions]
+pp.unicode.fun = true # pretty-prints `fun a ↦ b`
+autoImplicit = false
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+
+[[lean_lib]]
+name = "MathlibInspector"
+
+[[lean_exe]]
+name = "mathlib-inspector"       # 可执行文件的名字
+root = "MathlibInspector.lean"   # 主入口文件

@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "mathlib-inspector"
+version = "0.1.0"
+description = ""
+authors = ["penglingwei <penglingwei@zju.edu.cn>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+huggingface-hub = "^0.26.3"
+python-dotenv = "^1.0.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
