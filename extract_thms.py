@@ -208,4 +208,5 @@ if __name__ == "__main__":
     os.system("git push origin main")
     run_lean_script(next_thmsfile, 0, None, max_prop_size, max_proof_size)
     upload(next_thmsfile, None)
+    previousThms.extend(load_thms(next_thmsfile))
     
