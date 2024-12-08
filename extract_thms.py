@@ -223,7 +223,7 @@ if __name__ == "__main__":
         os.system(f"git add {thmsfile}.txt")
         os.system("git add consts.txt")
         os.system(f'git commit -m "auto update {thmsfile}.txt and consts.txt"')
-        os.system("git push origin workflow")
+        os.system("git push -f origin workflow:workflow")
 
     zip_file = upload(thmsfile, end_of_index)
 
@@ -246,7 +246,7 @@ if __name__ == "__main__":
         print(f"成功写入{next_thmsfile}")
         os.system(f"git add {next_thmsfile}.txt")
         os.system(f'git commit -m "add {next_thmsfile}.txt"')
-        os.system("git push origin main")
+        os.system("git push -f origin workflow:workflow")
         run_lean_script(next_thmsfile, 0, None, max_prop_size, max_proof_size)
         zip_file = upload(next_thmsfile, None)
         previousThms.extend(load_thms(next_thmsfile))
