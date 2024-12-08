@@ -148,7 +148,6 @@ if __name__ == "__main__":
     "-g",
     "--generate",
     dest="generate",
-    type=bool,
     help="Enable generator of lean4 script",
     default=False,
     action="store_true",
