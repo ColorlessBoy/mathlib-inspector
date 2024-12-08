@@ -2,6 +2,7 @@ import argparse
 import os
 import zipfile
 import shutil
+from pathlib import Path
 
 from huggingface_hub import HfApi
 from huggingface_hub.utils import RepositoryNotFoundError
@@ -112,6 +113,7 @@ def upload(thmsfile: str, end_of_index: int):
             print(output_zip, "上传成功")  # 上传成功提示
         except Exception as e:
             print(f"上传失败: {e}")
+    return output_zip
 
 
 def extract_names_from_file(filepath):
@@ -130,10 +132,11 @@ def load_thms(thmfile):
     return thms
 
 
-def get_ext_depth(previousThms: set[str], thmsfile: str):
+def get_ext_depth(previousThms: set[str], folder: str):
     deps = set()  # 证明依赖的常量
-    for thm_file in tqdm(thmsfile):
-        names = extract_names_from_file(os.path.join(thmsfile, f"{thm_file}.txt"))
+    thmsfiles = [Path(file).stem for file in os.listdir(folder)]
+    for thm_file in tqdm(thmsfiles):
+        names = extract_names_from_file(os.path.join(folder, f"{thm_file}.txt"))
         for name in names:
             if name not in previousThms:
                 deps.add(name)
@@ -222,7 +225,7 @@ if __name__ == "__main__":
         os.system(f'git commit -m "new {thmsfile}.txt"')
         os.system("git push origin main")
 
-    upload(thmsfile, end_of_index)
+    zip_file = upload(thmsfile, end_of_index)
 
     depth = args.depth
     if depth == 0 or not args.generate:
@@ -236,6 +239,7 @@ if __name__ == "__main__":
         if len(deps) == 0:
             break
         shutil.rmtree(previous_thmsfile)
+        os.remove(zip_file)
         print(f"开始写入{next_thmsfile}={len(deps)}...")
         with open(f"{next_thmsfile}.txt", "r") as f:
             f.writelines([line + "\n" for line in deps])
@@ -244,5 +248,5 @@ if __name__ == "__main__":
         os.system(f'git commit -m "add {next_thmsfile}.txt"')
         os.system("git push origin main")
         run_lean_script(next_thmsfile, 0, None, max_prop_size, max_proof_size)
-        upload(next_thmsfile, None)
+        zip_file = upload(next_thmsfile, None)
         previousThms.extend(load_thms(next_thmsfile))
