@@ -199,10 +199,10 @@ if __name__ == "__main__":
     if len(deps) == 0:
       break
     shutil.rmtree(previous_thmsfile)
-    print(f"开始写入thms_dep1={len(deps)}...")
+    print(f"开始写入{next_thmsfile}={len(deps)}...")
     with open(f"{next_thmsfile}.txt", "r") as f:
       f.writelines([line + "\n" for line in deps])
-    print("成功写入thms_dep1")
+    print(f"成功写入{next_thmsfile}")
     os.system(f"git add {next_thmsfile}.txt")
     os.system(f'git commit -m "add {next_thmsfile}.txt"')
     os.system("git push origin main")
