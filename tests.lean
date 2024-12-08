@@ -22,6 +22,12 @@ open Lean Meta
 #eval printConstantDetails `Iff.refl
 #eval printConstantDetails `Iff.intro
 
+#check RingHom.IsIntegral.quotient
+#eval printConstantDetails `RingHom.IsIntegral.quotient
+#check Asymptotics.superpolynomialDecay_iff_isBigO
+
+#print CommRing
+
 def e1 : ∃ x : Nat, x > 0 :=
   have h : 1 > 0 := Nat.zero_lt_succ 0
   ⟨1, h⟩

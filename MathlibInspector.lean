@@ -110,20 +110,20 @@ partial def toPrefixExpr (e : Expr) (maxExprSize: Nat) : MetaM String := do
   | Expr.bvar idx => pure s!"#{idx}"
   | Expr.fvar fvarId => pure s!"(FreeVar {fvarId.name})"
   | Expr.mvar mvarId => pure s!"(MetaVar {mvarId.name})"
-  | Expr.sort lvl => pure s!"(Sort {lvl})"
-  | Expr.const n _ => pure s!"(Const {n})"
+  | Expr.sort lvl => pure s!"S({lvl})"
+  | Expr.const n _ => pure s!"{n}"
   | Expr.app f arg =>
     let fStr ← toPrefixExpr f maxExprSize
     let argsStr ← toPrefixExpr arg maxExprSize
-    pure s!"(App {fStr} {argsStr})"
-  | Expr.lam n t body _ =>
+    pure s!"{fStr}({argsStr})"
+  | Expr.lam _ t body _ =>
     let bodyStr ← toPrefixExpr body maxExprSize
     let t_prefix ← toPrefixExpr t maxExprSize
-    pure s!"(Lambda ({n} : {t_prefix}) {bodyStr})"
-  | Expr.forallE n t body _ =>
+    pure s!"L({t_prefix})({bodyStr})"
+  | Expr.forallE _ t body _ =>
     let bodyStr ← toPrefixExpr body maxExprSize
     let t_prefix ← toPrefixExpr t maxExprSize
-    pure s!"(Forall ({n} : {t_prefix}) {bodyStr})"
+    pure s!"F({t_prefix})({bodyStr})"
   | Expr.letE n t value body _ => do
     let tStr ← toPrefixExpr t maxExprSize
     let valueStr ← toPrefixExpr value maxExprSize
