@@ -225,7 +225,7 @@ if __name__ == "__main__":
     upload(thmsfile, end_of_index)
 
     depth = args.depth
-    if depth == 0 or args.generate:
+    if depth == 0 or not args.generate:
         exit(0)
 
     previousThms = load_thms(thmsfile)
