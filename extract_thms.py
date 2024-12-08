@@ -206,6 +206,8 @@ if __name__ == "__main__":
     max_prop_size = args.max_prop_size
     max_proof_size = args.max_proof_size
 
+    print(f"Generate flag: {args.generate}")
+
     if args.generate:
         run_lean_script(
             thmsfile,

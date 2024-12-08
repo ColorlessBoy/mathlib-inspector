@@ -40,13 +40,23 @@ jobs:
         run: |
           poetry install  # 安装依赖
 
-      - name: Init Git Config
-        run: |
-          git config --global user.email "penglingwei@zju.edu.cn"
-          git config --global user.name "penglingwei"
-
       - name: Upload to Hugging Face
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}  # 从 GitHub Secrets 获取 Hugging Face token
         run: |
+          wget -q https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh
+          bash elan-init.sh -y
+          source ~/.elan/env
+          elan default leanprover/lean4:stable
+          lean --version
+          lake --version
+          lake exe cache get
+          lake update
+          find ./.lake/packages/mathlib -name "*.olean"
+          export LEAN_PATH="./.lake/packages/mathlib/.lake/build/lib:./.lake/build/lib"
+          source ~/.profile
+          which lake
+          lake build
+          git config --global user.email "penglingwei@zju.edu.cn"
+          git config --global user.name "penglingwei"
           poetry run python extract_thms.py -t thms -d colorlessboy/mathlib4-thms -s 0 -g --max-prop-size 2048 --max-proof-size 100000 --depth 10
