@@ -193,8 +193,8 @@ if __name__ == "__main__":
 
   previousThms = load_thms(thmsfile)
   for idx in range(depth):
-    previous_thmsfile = f"{thmsfile}_dep{idx-1}" if idx > 0 else thmsfile
-    next_thmsfile = f"{thmsfile}_dep{idx}"
+    previous_thmsfile = f"{thmsfile}_dep{idx}" if idx > 0 else thmsfile
+    next_thmsfile = f"{thmsfile}_dep{idx+1}"
     deps = get_ext_depth(previousThms, previous_thmsfile)
     if len(deps) == 0:
       break
