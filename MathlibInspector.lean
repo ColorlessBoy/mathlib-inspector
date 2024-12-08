@@ -264,7 +264,10 @@ def hashConstName (s: String) : String :=
   s
 
 -- 将表达式转化为前缀表达式的字符串
-partial def toPrefixExprCompact (e : Expr) : MetaM String := do
+partial def toPrefixExprCompact (e : Expr) (maxSize: Nat) : MetaM String := do
+  let size := getExprSize e maxSize
+  if size >= maxSize then
+    return s!"Too large"
   match e with
   | Expr.bvar idx => pure s!"#{idx}"
   | Expr.fvar fvarId => pure s!"(F {fvarId.name})"
@@ -274,31 +277,31 @@ partial def toPrefixExprCompact (e : Expr) : MetaM String := do
     let n_hashed := hashConstName n.toString
     pure s!"(C {n_hashed})"
   | Expr.app f arg =>
-    let fStr ← toPrefixExprCompact f
-    let argsStr ← toPrefixExprCompact arg
+    let fStr ← toPrefixExprCompact f maxSize
+    let argsStr ← toPrefixExprCompact arg maxSize
     pure s!"(A {fStr} {argsStr})"
   | Expr.lam _ t body _ =>
-    let bodyStr ← toPrefixExprCompact body
-    let t_prefix ← toPrefixExprCompact t
+    let bodyStr ← toPrefixExprCompact body maxSize
+    let t_prefix ← toPrefixExprCompact t maxSize
     pure s!"(L {t_prefix} {bodyStr})"
   | Expr.forallE _ t body _ =>
-    let bodyStr ← toPrefixExprCompact body
-    let t_prefix ← toPrefixExprCompact t
+    let bodyStr ← toPrefixExprCompact body maxSize
+    let t_prefix ← toPrefixExprCompact t maxSize
     pure s!"(F {t_prefix} {bodyStr})"
   | Expr.letE _ t value body _ => do
-    let tStr ← toPrefixExprCompact t
-    let valueStr ← toPrefixExprCompact value
-    let bodyStr ← toPrefixExprCompact body
+    let tStr ← toPrefixExprCompact t maxSize
+    let valueStr ← toPrefixExprCompact value maxSize
+    let bodyStr ← toPrefixExprCompact body maxSize
     pure s!"(Let {tStr} {valueStr} {bodyStr})"
   | Expr.lit l =>
     match l with
     | Literal.natVal val => pure s!"(NL {val})"
     | Literal.strVal val => pure s!"(SL \"{val}\")"
   | Expr.mdata data expr =>
-    let bodyExpr ← toPrefixExprCompact expr
+    let bodyExpr ← toPrefixExprCompact expr maxSize
     pure s!"(Mdata {data} :: {bodyExpr})"
   | Expr.proj typeName idx struct =>
-    let prefixStruct ← toPrefixExprCompact struct
+    let prefixStruct ← toPrefixExprCompact struct maxSize
     pure s!"(P {typeName} {idx} {prefixStruct})"
 
 def getConstantDetailsCompact (name : Name) (maxPropSize: Nat := 1024) (maxProofSize: Nat := 10000) : MetaM String := do
@@ -306,7 +309,7 @@ def getConstantDetailsCompact (name : Name) (maxPropSize: Nat := 1024) (maxProof
   let propSize := getExprSize type maxPropSize
   if propSize > maxPropSize then
     throwError "prop size is too large"
-  let typeStr ← toPrefixExprCompact type
+  let typeStr ← toPrefixExprCompact type maxPropSize
   let hashed_name := hashConstName name.toString
   match value? with
   | some value =>
@@ -314,7 +317,7 @@ def getConstantDetailsCompact (name : Name) (maxPropSize: Nat := 1024) (maxProof
     if proofSize > maxProofSize then
       pure s!"{hashed_name}\n{typeStr}"
     else
-      let valueStr ← toPrefixExprCompact value
+      let valueStr ← toPrefixExprCompact value maxProofSize
       pure s!"{hashed_name}\n{typeStr}\n{valueStr}"
   | none =>
     pure s!"{hashed_name}\n{typeStr}"
@@ -355,7 +358,9 @@ def mainLoop (outputDir: String) (thmsFilePath: String) (startThmIdx: Nat) (endT
   let coreStateRef ← ST.mkRef { env := env } -- 初始化 Core.State
 
   if generateNewWords > 0 then
+    IO.println s!"Generate new consts.txt"
     let _ ← ((saveConstListToFile "consts.txt").run metaCtx metaState coreCtx coreStateRef).toBaseIO
+    IO.println s!"Generate new {thmsFilePath}"
     let _ ← ((saveThmListToFile thmsFilePath).run metaCtx metaState coreCtx coreStateRef).toBaseIO
 
   -- 读取 thmsFilePath 文件内容

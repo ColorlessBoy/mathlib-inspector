@@ -46,4 +46,4 @@ jobs:
           lake build
           git config --global user.email "penglingwei@zju.edu.cn"
           git config --global user.name "penglingwei"
-          poetry run python extract_thms.py -t thms -d colorlessboy/mathlib4-thms -s 0 -g --max-prop-size 2048 --max-proof-size 100000 --depth 10
+          poetry run python extract_thms.py -t thms -d colorlessboy/mathlib4-thms -s 0 -g --max-prop-size 2048 --max-proof-size 10000 --depth 0

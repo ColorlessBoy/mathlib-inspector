@@ -222,7 +222,7 @@ if __name__ == "__main__":
         )
         os.system(f"git add {thmsfile}.txt")
         os.system("git add consts.txt")
-        os.system(f'git commit -m "new {thmsfile}.txt"')
+        os.system(f'git commit -m "auto update {thmsfile}.txt and consts.txt"')
         os.system("git push origin main")
 
     zip_file = upload(thmsfile, end_of_index)
