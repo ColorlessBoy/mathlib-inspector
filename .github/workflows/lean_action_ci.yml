@@ -44,4 +44,4 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}  # 从 GitHub Secrets 获取 Hugging Face token
         run: |
-          poetry run python extract_thms.py -t thms.txt -o thms -d colorlessboy/mathlib4-thms -s 0 -g True --max-prop-size 2048 --max-proof-size 100000 --depth 10
+          poetry run python extract_thms.py -t thms -d colorlessboy/mathlib4-thms -s 0 -g True --max-prop-size 2048 --max-proof-size 100000 --depth 10
