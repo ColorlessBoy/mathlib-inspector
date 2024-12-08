@@ -40,6 +40,11 @@ jobs:
         run: |
           poetry install  # 安装依赖
 
+      - name: Init Git Config
+        run: |
+          git config --global user.email "penglingwei@zju.edu.cn"
+          git config --global user.name "penglingwei"
+
       - name: Upload to Hugging Face
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}  # 从 GitHub Secrets 获取 Hugging Face token
