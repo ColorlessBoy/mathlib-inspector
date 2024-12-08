@@ -11,7 +11,7 @@ import subprocess
 import sys
 import re
 
-def run_lean_script(thmsfile: str, start_thm_idx: int|None = None, end_thm_idx: int|None = None, max_prop_size=2048, max_proof_size=10000):
+def run_lean_script(thmsfile: str, start_thm_idx: int|None = None, end_thm_idx: int|None = None, max_prop_size=2048, max_proof_size=10000, generate_new_words=0):
   try:
     if start_thm_idx is None:
       start_thm_idx = 0
@@ -21,7 +21,7 @@ def run_lean_script(thmsfile: str, start_thm_idx: int|None = None, end_thm_idx: 
 
     # 启动 Lean 子进程
     process = subprocess.Popen(
-      ["lake", "env", "lean", "--run", "MathlibInspector.lean", f"{thmsfile}.txt", thmsfile, start_thm_idx, end_thm_idx, max_prop_size, max_proof_size],
+      ["lake", "env", "lean", "--run", "MathlibInspector.lean", f"{thmsfile}.txt", thmsfile, start_thm_idx, end_thm_idx, generate_new_words, max_prop_size, max_proof_size],
         stdout=sys.stdout,  # 子进程的 stdout 重定向到父进程
         stderr=sys.stderr,  # 子进程的 stderr 重定向到父进程
         text=True
@@ -184,7 +184,11 @@ if __name__ == "__main__":
   max_proof_size = args.max_proof_size
 
   if args.generate:
-    run_lean_script(thmsfile, start_of_index, end_of_index, max_prop_size, max_proof_size)
+    run_lean_script(thmsfile, start_of_index, end_of_index, max_prop_size, max_proof_size, generate_new_words=1)
+    os.system(f"git add {thmsfile}.txt")
+    os.system("git add consts.txt")
+    os.system(f'git commit -m "new {thmsfile}.txt"')
+    os.system("git push origin main")
 
   upload(thmsfile, end_of_index)
   

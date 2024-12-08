@@ -387,8 +387,8 @@ def main (args : List String) : IO Unit := do
   if args.length == 0 then
     IO.println "Usage: MathlibInspector <thmsFilePath> <outputDir> ?<startThmIdx> ?<endThmIdx> ?<generateNewWords> ?<maxPropSize> ?<maxProofSize>"
     return
-  let outputDir := if args.length >= 2 then args.get! 1 else "output"
   let thmsFilePath := if args.length >= 1 then args.get! 0 else "thms.txt"
+  let outputDir := if args.length >= 2 then args.get! 1 else "output"
   let startThmIdx := if args.length >= 3 then (args.get! 2).toNat! else 0
   let endThmIdx := if args.length >= 4 then (args.get! 3).toNat! else 0
   let generateNewWords := if args.length >= 5 then (args.get! 4).toNat! else 0
