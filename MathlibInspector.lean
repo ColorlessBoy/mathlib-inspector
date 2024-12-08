@@ -6,10 +6,6 @@ import Mathlib
 open Lean Meta Tactic
 open Lean System Meta
 
--- 设置树大小阈值，比如 10000
-def maxSearchSize : Nat := 20000
-def maxExprSize : Nat := 20000
-
 -- 计算 Expr 的节点数，深度超过 maxSearchSize 时提前终止，返回 1
 partial def getExprSize (e : Expr) (reward : Nat) : Nat :=
   if reward <= 0 then
@@ -165,7 +161,7 @@ def extractConstantDetails (name : Name) : MetaM (Expr × Option Expr) := do
       return (ind.type, none)
   | _ => throwError "Constant {name} not found or is not supported."
 
-def getConstantDetails (name : Name) (maxPropSize : Nat := 1000) (maxProofSize : Nat := 1000): MetaM String := do
+def getConstantDetails (name : Name) (maxPropSize : Nat := 1024) (maxProofSize : Nat := 10000): MetaM String := do
   let (type, value?) ← extractConstantDetails name
   let typeStr ← toPrefixExpr type maxPropSize
   match value? with
@@ -231,7 +227,7 @@ def saveConstListToFile (filePath : String) : MetaM Unit := do
   IO.FS.writeFile filePath content
 
 -- 打印常量的信息，包括类型和可选的值
-def printConstantDetails (name : Name) (maxPropSize: Nat := 1000) (maxProofSize: Nat := 1000) : MetaM Unit := do
+def printConstantDetails (name : Name) (maxPropSize: Nat := 1024) (maxProofSize: Nat := 10000) : MetaM Unit := do
   let (type, value?) ← extractConstantDetails name
   let typeStr ← toPrefixExpr type maxPropSize
   match value? with
@@ -242,7 +238,7 @@ def printConstantDetails (name : Name) (maxPropSize: Nat := 1000) (maxProofSize:
     logInfo s!"{name}\n  {typeStr}"
 
 -- 打印常量的信息，包括类型和可选的值
-def printConstantDetailsV2 (name : String) (maxPropSize: Nat := 1000) (maxProofSize: Nat := 1000): MetaM Unit := do
+def printConstantDetailsV2 (name : String) (maxPropSize: Nat := 1024) (maxProofSize: Nat := 10000): MetaM Unit := do
   let (type, value?) ← extractConstantDetails (parseName name)
   let typeStr ← toPrefixExpr type maxPropSize
   match value? with
@@ -265,15 +261,10 @@ def stringHash (s : String) : UInt64 :=
   s.foldl (fun acc c => (acc * multiplier + UInt64.ofNat c.toNat) % modulus) 5381
 
 def hashConstName (s: String) : String :=
-  let pre := extractPrefix s
-  let index := stringHash s
-  s!"{pre}{index}"
+  s
 
 -- 将表达式转化为前缀表达式的字符串
-partial def toPrefixExprCompact (e : Expr) (maxExprSize: Nat) : MetaM String := do
-  let size := getExprSize e maxExprSize
-  if size >= maxExprSize then
-    throwError "The prefix expression is too large."
+partial def toPrefixExprCompact (e : Expr) : MetaM String := do
   match e with
   | Expr.bvar idx => pure s!"#{idx}"
   | Expr.fvar fvarId => pure s!"(F {fvarId.name})"
@@ -283,47 +274,54 @@ partial def toPrefixExprCompact (e : Expr) (maxExprSize: Nat) : MetaM String := 
     let n_hashed := hashConstName n.toString
     pure s!"(C {n_hashed})"
   | Expr.app f arg =>
-    let fStr ← toPrefixExprCompact f maxExprSize
-    let argsStr ← toPrefixExprCompact arg maxExprSize
+    let fStr ← toPrefixExprCompact f
+    let argsStr ← toPrefixExprCompact arg
     pure s!"(A {fStr} {argsStr})"
   | Expr.lam _ t body _ =>
-    let bodyStr ← toPrefixExprCompact body maxExprSize
-    let t_prefix ← toPrefixExprCompact t maxExprSize
+    let bodyStr ← toPrefixExprCompact body
+    let t_prefix ← toPrefixExprCompact t
     pure s!"(L {t_prefix} {bodyStr})"
   | Expr.forallE _ t body _ =>
-    let bodyStr ← toPrefixExprCompact body maxExprSize
-    let t_prefix ← toPrefixExprCompact t maxExprSize
+    let bodyStr ← toPrefixExprCompact body
+    let t_prefix ← toPrefixExprCompact t
     pure s!"(F {t_prefix} {bodyStr})"
   | Expr.letE _ t value body _ => do
-    let tStr ← toPrefixExprCompact t maxExprSize
-    let valueStr ← toPrefixExprCompact value maxExprSize
-    let bodyStr ← toPrefixExprCompact body maxExprSize
+    let tStr ← toPrefixExprCompact t
+    let valueStr ← toPrefixExprCompact value
+    let bodyStr ← toPrefixExprCompact body
     pure s!"(Let {tStr} {valueStr} {bodyStr})"
   | Expr.lit l =>
     match l with
     | Literal.natVal val => pure s!"(NL {val})"
     | Literal.strVal val => pure s!"(SL \"{val}\")"
   | Expr.mdata data expr =>
-    let bodyExpr ← toPrefixExprCompact expr maxExprSize
+    let bodyExpr ← toPrefixExprCompact expr
     pure s!"(Mdata {data} :: {bodyExpr})"
   | Expr.proj typeName idx struct =>
-    let prefixStruct ← toPrefixExprCompact struct maxExprSize
+    let prefixStruct ← toPrefixExprCompact struct
     pure s!"(P {typeName} {idx} {prefixStruct})"
 
-def getConstantDetailsCompact (name : Name) (maxPropSize: Nat := 1000) (maxProofSize: Nat := 1000) : MetaM String := do
+def getConstantDetailsCompact (name : Name) (maxPropSize: Nat := 1024) (maxProofSize: Nat := 10000) : MetaM String := do
   let (type, value?) ← extractConstantDetails name
-  let typeStr ← toPrefixExprCompact type maxPropSize
+  let propSize := getExprSize type maxPropSize
+  if propSize > maxPropSize then
+    throwError "prop size is too large"
+  let typeStr ← toPrefixExprCompact type
   let hashed_name := hashConstName name.toString
   match value? with
   | some value =>
-    let valueStr ← toPrefixExprCompact value maxProofSize
-    pure s!"{hashed_name}\n{typeStr}\n{valueStr}"
+    let proofSize := getExprSize value maxProofSize
+    if proofSize > maxProofSize then
+      pure s!"{hashed_name}\n{typeStr}"
+    else
+      let valueStr ← toPrefixExprCompact value
+      pure s!"{hashed_name}\n{typeStr}\n{valueStr}"
   | none =>
     pure s!"{hashed_name}\n{typeStr}"
 
 -- 在 IO 中运行 MetaM
 def runMetaMInIO (metaCtx: Meta.Context) (metaState: Meta.State) (coreCtx: Core.Context) (coreStateRef : ST.Ref IO.RealWorld Core.State
-)  (filePath: String) (constName : String) (maxPropSize: Nat := 1000) (maxProofSize: Nat := 1000) : IO Unit := do
+)  (filePath: String) (constName : String) (maxPropSize: Nat := 1024) (maxProofSize: Nat := 10000) : IO Unit := do
   let res ← ((getConstantDetailsCompact (parseName constName) maxPropSize maxProofSize).run metaCtx metaState coreCtx coreStateRef).toBaseIO
   match res with
   | .ok (info, _) =>
@@ -335,7 +333,7 @@ def runMetaMInIO (metaCtx: Meta.Context) (metaState: Meta.State) (coreCtx: Core.
     IO.println s!"Error: {constName} {errorMsg}"
 
 -- 主函数，支持动态交互
-def mainLoop (outputDir: String) (thmsFilePath: String) (startThmIdx: Nat) (endThmIdx: Nat) (generateNewWords: Nat) (maxPropSize: Nat := 1000) (maxProofSize: Nat := 1000) : IO Unit := do
+def mainLoop (outputDir: String) (thmsFilePath: String) (startThmIdx: Nat) (endThmIdx: Nat) (generateNewWords: Nat) (maxPropSize: Nat := 1024) (maxProofSize: Nat := 10000) : IO Unit := do
   let opts : Options := {}
   let env ← importModules #[{ module := `Init }, { module := `Std }, { module := `Mathlib }] opts
   let coreCtx : Core.Context := {
@@ -394,7 +392,7 @@ def main (args : List String) : IO Unit := do
   let startThmIdx := if args.length >= 3 then (args.get! 2).toNat! else 0
   let endThmIdx := if args.length >= 4 then (args.get! 3).toNat! else 0
   let generateNewWords := if args.length >= 5 then (args.get! 4).toNat! else 0
-  let maxPropSize := if args.length >= 6 then (args.get! 5).toNat! else 10000
+  let maxPropSize := if args.length >= 6 then (args.get! 5).toNat! else 1024
   let maxProofSize := if args.length >= 7 then (args.get! 6).toNat! else 10000
 
   let folderExists ← FilePath.pathExists outputDir

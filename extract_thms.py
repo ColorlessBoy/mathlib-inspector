@@ -155,6 +155,7 @@ if __name__ == "__main__":
     except Exception as e:
       print(f"上传失败: {e}")
 
+  """
   const_hash_list: list[str] = []
 
   with open("consts.txt", "r") as f:
@@ -176,3 +177,4 @@ if __name__ == "__main__":
     repo_type="dataset",
   )
   print(words_path, "上传成功") 
+  """

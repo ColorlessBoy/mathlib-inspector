@@ -5,6 +5,7 @@ import zipfile
 import os
 from pathlib import Path
 import shutil
+from tqdm import tqdm
 
 
 load_dotenv()
@@ -18,7 +19,7 @@ def get_huggingface_ranges():
   # 用于存放解析后的结果
   parsed_files = []
   # 正则表达式匹配模式
-  pattern = r"output-(\d+)-(\d+)\.zip"
+  pattern = r"thms-(\d+)-(\d+)\.zip"
   # 遍历文件名并解析
   for file_name in file_names:
     match = re.match(pattern, file_name)
@@ -30,6 +31,7 @@ def get_huggingface_ranges():
   return [entry[-1] for entry in parsed_files]
 
 zip_files = get_huggingface_ranges()
+print('zip_files', zip_files)
 
 def load_hashed_consts_map():
   print("开始加载hashed_consts_map...")
@@ -50,9 +52,12 @@ def load_hashed_consts_map():
 hashed_consts_map = load_hashed_consts_map()
 
 def load_zip_file(filename: str): 
-  print(f"开始下载{filename}...")
   extract_path = os.path.join("output", Path(filename).stem)
-  os.makedirs(extract_path, exist_ok=True)
+  # 检查 extract_path 是否非空
+  if os.path.exists(extract_path) and any(os.scandir(extract_path)):
+      print(f"{extract_path} 已存在且非空，跳过下载和解压。")
+      return extract_path
+  print(f"开始下载{filename}...")
   repo_id = "colorlessboy/mathlib4-thms"
   filepath = hf_hub_download(repo_id=repo_id, repo_type="dataset", filename=filename)
   with zipfile.ZipFile(filepath, 'r') as zip_ref:
@@ -62,17 +67,60 @@ def load_zip_file(filename: str):
 
 folder_path = load_zip_file(zip_files[0])  
 
-def load_thm_list():
-  print("开始加载thms.txt...")
+def load_consts_map():
+  print("开始加载hashed_consts.txt...")
   with open("output/hashed_consts.txt", "r") as f:
-    thms = {}
+    consts_map1, consts_map2  = {}, {}
     for line in f.readlines():
       k, v = line.strip().split('\t')
-      thms[k] = v
-  print("成功加载thms.txt")
-  return thms
+      consts_map1[k] = v
+      consts_map2[v] = k
+  print("成功加载hashed_consts.txt")
+  return consts_map1, consts_map2
 
-thms = load_thm_list()
-print(len(thms))
-k = "Ad1041480902"
-print(k, thms[k])
+consts_map1, consts_map2 = load_consts_map()
+print('number of consts =', len(consts_map1))
+k = "Su1137602425"
+print(k, consts_map1[k])
+k = "Iff"
+print(k, consts_map2[k])
+
+def get_all_filenames(directory):
+  # 确保目录存在
+  if not os.path.exists(directory):
+      print(f"目录 '{directory}' 不存在")
+      return []
+  # 列出目录下的所有文件（包括子文件夹中的文件）
+  filenames = set()
+  for _, _, files in os.walk(directory):
+    for file in files:
+      filenames.add(Path(file).stem)
+  return filenames
+
+
+folder_thms = get_all_filenames(folder_path)
+
+print(folder_path, len(folder_thms))
+
+def extract_names_from_file(filepath):
+    pattern = r"\(C (\w+)\)"
+    names = []
+    with open(filepath, 'r', encoding='utf-8') as file:
+        for line in file:
+            names.extend(re.findall(pattern, line))
+    return names
+
+
+deps = set() # 证明依赖的常量 
+for thm_file in tqdm(folder_thms):
+  names = extract_names_from_file(os.path.join(folder_path, f"{thm_file}.txt"))
+  for name in names:
+    if name not in thm_file:
+      deps.add(consts_map1[name])
+
+depslist = list(deps)
+depslist.sort()
+print("开始写入thms_dep1...")
+with open("thms_dep1.txt", "r") as f:
+  f.writelines([line + '\n' for line in depslist])
+print("成功写入thms_dep1")

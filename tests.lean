@@ -18,6 +18,7 @@ open Lean Meta
 #check @Prod
 #eval printConstantDetails `Prod.fst
 
+#eval printConstantDetails `Iff
 #check @Iff.intro
 #eval printConstantDetails `Iff.refl
 #eval printConstantDetails `Iff.intro
