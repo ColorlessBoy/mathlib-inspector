@@ -125,12 +125,13 @@ def extract_names_from_file(filepath):
     return names
 
 
-def load_thms(thmfile):
+def load_previous_thms():
     thms = []
-    with open(f"{thmfile}.txt", "r") as f:
-        thms = [line.strip() for line in f.readlines()]
-    return thms
-
+    all_thmtxtx = [Path(file).stem for file in os.listdir('.') if file.startswith('thms') and file.endswith('.txt')]
+    for thmfile in all_thmtxtx:
+        with open(f"{thmfile}.txt", "r") as f:
+            thms.extend([line.strip() for line in f.readlines()])
+    return thms, all_thmtxtx
 
 def get_ext_depth(previousThms: set[str], folder: str):
     deps = set()  # 证明依赖的常量
@@ -199,7 +200,6 @@ if __name__ == "__main__":
         help="Max Proof Size",
         default=100000,
     )
-    parser.add_argument("--depth", dest="depth", type=int, help="Depth", default=0)
 
     args = parser.parse_args()
 
@@ -227,17 +227,14 @@ if __name__ == "__main__":
 
     zip_file = upload(thmsfile, end_of_index)
 
-    depth = args.depth
-    if depth == 0 or not args.generate:
+    if not args.generate:
         exit(0)
 
-    previousThms = load_thms(thmsfile)
-    for idx in range(depth):
-        previous_thmsfile = f"{thmsfile}_dep{idx}" if idx > 0 else thmsfile
-        next_thmsfile = f"{thmsfile}_dep{idx+1}"
-        deps = get_ext_depth(previousThms, previous_thmsfile)
-        if len(deps) == 0:
-            break
+    previousThms, all_thmtxts = load_previous_thms()
+    previous_thmsfile = thmsfile
+    next_thmsfile = f"thms_dep{len(all_thmtxts)}"
+    deps = get_ext_depth(previousThms, previous_thmsfile)
+    if len(deps) > 0:
         shutil.rmtree(previous_thmsfile)
         os.remove(zip_file)
         print(f"开始写入{next_thmsfile}={len(deps)}...")
@@ -247,6 +244,3 @@ if __name__ == "__main__":
         os.system(f"git add {next_thmsfile}.txt")
         os.system(f'git commit -m "add {next_thmsfile}.txt"')
         os.system("git push -f origin workflow:workflow")
-        run_lean_script(next_thmsfile, 0, None, max_prop_size, max_proof_size)
-        zip_file = upload(next_thmsfile, None)
-        previousThms.extend(load_thms(next_thmsfile))
