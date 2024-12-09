@@ -35,6 +35,8 @@ def get_huggingface_thms():
 def load_previous_thms():
     thms = []
     hf_thms = get_huggingface_thms()
+    print("hf_thms", hf_thms)
+    os.system("ls")
     all_thmtxts = [name[:-len(".txt")] for name in hf_thms]
     for thmfile in all_thmtxts:
         with open(f"{thmfile}.txt", "r") as f:
