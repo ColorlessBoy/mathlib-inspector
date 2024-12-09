@@ -22,8 +22,7 @@ def run_lean_script(
         if start_thm_idx is None:
             start_thm_idx = 0
         if end_thm_idx is None:
-            with open(f"{thmsfile}.txt", "r") as f:
-                end_thm_idx = len(f.readlines())
+            end_thm_idx = 0
 
         # 启动 Lean 子进程
         process = subprocess.Popen(
@@ -84,12 +83,13 @@ def upload_file(file: str):
     except RepositoryNotFoundError:
         print(f"数据集 {repo_id} 不存在，正在创建...")
         api.create_repo(repo_id, repo_type="dataset")
-    api.upload_file(
-        path_or_fileobj=file,  # 传递文件对象
-        path_in_repo=file,
-        repo_id=repo_id,
-        repo_type="dataset",
-    )
+    with open(file, "r") as f:
+        api.upload_file(
+            path_or_fileobj=f,  # 传递文件对象
+            path_in_repo=file,
+            repo_id=repo_id,
+            repo_type="dataset",
+        )
     print(file, "上传成功")  # 上传成功提示
 
 def upload(thmsfile: str, start_of_index: int, end_of_index: int):
@@ -209,6 +209,7 @@ if __name__ == "__main__":
             generate_new_words=generate_new_words
         )
         if generate_new_words > 0:
+            os.system("ls")
             upload_file(f"{thmsfile}.txt")
             upload_file("consts.txt")
 
