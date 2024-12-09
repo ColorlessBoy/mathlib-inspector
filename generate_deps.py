@@ -58,7 +58,7 @@ def get_ext_depth(previousThms: set[str], folder: str, max_workers=8):
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = []
         for file in tqdm(thmsfiles):
-            futures.append(executor.submit(extract_names_from_file, file, previousThms))
+            futures.append(executor.submit(process_file, file, previousThms))
             # 控制提交任务的数量，防止内存占用过高
             if len(futures) >= max_workers * 2:
                 for future in as_completed(futures):
