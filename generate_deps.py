@@ -29,11 +29,13 @@ def get_huggingface_thms():
         os.remove(name)
     filepath = hf_hub_download(repo_id=repo_id, repo_type="dataset", filename=name)
     shutil.move(filepath, name)
+    print(f"download {name}")
   return parsed_files
 
 def load_previous_thms():
     thms = []
-    all_thmtxts = [name[:-len(".txt")] for name in get_huggingface_thms()]
+    hf_thms = get_huggingface_thms()
+    all_thmtxts = [name[:-len(".txt")] for name in hf_thms]
     for thmfile in all_thmtxts:
         with open(f"{thmfile}.txt", "r") as f:
             thms.extend([line.strip() for line in f.readlines()])
