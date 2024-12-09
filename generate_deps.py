@@ -6,7 +6,6 @@ import os
 import re 
 from pathlib import Path
 from tqdm import tqdm
-import shutil
 
 def extract_names_from_file(filepath):
     pattern = r"\(C (\w+)\)"
@@ -24,22 +23,23 @@ def get_huggingface_thms():
   pattern = r"thms(\w*)\.txt"
   # 用于存放解析后的结果
   parsed_files = [name for name in file_names if re.match(pattern, name)]
+  filepaths = []
   for name in parsed_files:
     if os.path.exists(name):
         os.remove(name)
     filepath = hf_hub_download(repo_id=repo_id, repo_type="dataset", filename=name)
-    shutil.move(filepath, name)
     print(f"download {name}")
-  return parsed_files
+    filepaths.append(filepath)
+  return parsed_files, filepaths
 
 def load_previous_thms():
     thms = []
-    hf_thms = get_huggingface_thms()
+    hf_thms, hf_filepaths = get_huggingface_thms()
     print("hf_thms", hf_thms)
     os.system("ls")
     all_thmtxts = [name[:-len(".txt")] for name in hf_thms]
-    for thmfile in all_thmtxts:
-        with open(f"{thmfile}.txt", "r") as f:
+    for thmfile in hf_filepaths:
+        with open(thmfile, "r") as f:
             thms.extend([line.strip() for line in f.readlines()])
     all_thmtxts.sort(key=lambda x: int(x[len("thms_dep")]) if x.startswith("thms_dep") else 0)
     return thms, all_thmtxts
