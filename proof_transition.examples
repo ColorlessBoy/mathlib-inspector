@@ -8,7 +8,7 @@ Iff.intro
 
 state : F(S(0))(Iff(#0)(#0))
 action: L(S(0),(F(F(#0)(#0))(F(F(#1)(#2))(Iff(#2)(#2)))))
-        ---> Lambda(Sort(0), Iff.intro(#0)(#0))
+        ---> Lambda(S(0), Iff.intro(#0)(#0))
 state : L(S(0), F(#0)(#0)) 
 action: L(S(0), L(#0)(#0))
 state : Q.E.D. 

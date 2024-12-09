@@ -6,6 +6,8 @@ import os
 import re 
 from pathlib import Path
 from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import sys
 
 def extract_names_from_file(filepath):
     pattern = r"\(C (\w+)\)"
@@ -44,16 +46,25 @@ def load_previous_thms():
     all_thmtxts.sort(key=lambda x: int(x[len("thms_dep")]) if x.startswith("thms_dep") else 0)
     return thms, all_thmtxts
 
-def get_ext_depth(previousThms: set[str], folder: str):
-    deps = set()  # 证明依赖的常量
-    thmsfiles = [Path(file).stem for file in os.listdir(folder)]
-    for thm_file in tqdm(thmsfiles):
-        names = extract_names_from_file(os.path.join(folder, f"{thm_file}.txt"))
-        for name in names:
-            if name not in previousThms:
-                deps.add(name)
-    depslist = list(deps)
-    depslist.sort()
+def process_file(file_path, previousThms):
+    """处理单个文件，提取不在 previousThms 中的依赖。"""
+    names = extract_names_from_file(file_path)
+    return {name for name in names if name not in previousThms}
+
+def get_ext_depth(previousThms: set[str], folder: str, max_workers=8):
+    """并行提取所有不在 previousThms 中的依赖。"""
+    deps = set()  # 存储依赖的常量
+    thmsfiles = [Path(folder) / file for file in os.listdir(folder) if file.endswith(".txt")]
+
+    # 使用多线程并行处理
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(process_file, file, previousThms): file for file in thmsfiles}
+        
+        # 显示进度条并收集结果
+        for future in tqdm(as_completed(futures), total=len(futures), desc="Extracting dependencies"):
+            deps.update(future.result())
+
+    depslist = sorted(deps)
     return depslist
 
 def upload_file(file: str):
@@ -75,11 +86,13 @@ def upload_file(file: str):
     )
     print(file, "上传成功")  # 上传成功提示
 
+
 if __name__ == "__main__":
     previousThms, all_thmtxts = load_previous_thms()
     previous_thmsfile = all_thmtxts[-1]
     next_thmsfile = f"thms_dep{len(all_thmtxts)}"
-    deps = get_ext_depth(previousThms, previous_thmsfile)
+    max_workers = sys.argv[1] if len(sys.argv) >= 2 else 32
+    deps = get_ext_depth(previousThms, previous_thmsfile, max_workers=max_workers)
     if len(deps) > 0:
         print(f"开始写入{next_thmsfile}={len(deps)}...")
         with open(f"{next_thmsfile}.txt", "w") as f:
