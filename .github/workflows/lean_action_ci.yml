@@ -44,9 +44,6 @@ jobs:
           source ~/.profile
           which lake
           lake build
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          git checkout -b workflow
           poetry run python extract_thms.py -t thms -d colorlessboy/mathlib4-thms -s 0 -e 1000 -g --max-prop-size 2048 --max-proof-size 10000
 
       - name: Generate deps
