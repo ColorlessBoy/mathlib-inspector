@@ -2,12 +2,13 @@ import argparse
 import os
 import zipfile
 
-from huggingface_hub import HfApi
+from huggingface_hub import HfApi, hf_hub_download
 from huggingface_hub.utils import RepositoryNotFoundError
 from tqdm import tqdm
 
 import subprocess
 import sys
+import shutil
 
 
 def run_lean_script(
@@ -132,6 +133,12 @@ def upload(thmsfile: str, start_of_index: int, end_of_index: int):
             print(f"上传失败: {e}")
     return output_zip
 
+def get_huggingface_thms(file: str):
+  repo_id = "colorlessboy/mathlib4-thms"
+  filepath = hf_hub_download(repo_id=repo_id, repo_type="dataset", filename=file)
+  print(f"download {file}")
+  shutil.copy(filepath, os.path.join('.', file))
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Upload dataset")
     parser.add_argument(
@@ -199,6 +206,8 @@ if __name__ == "__main__":
 
     if args.generate:
         generate_new_words = 1 if thmsfile=="thms" else 0
+        if thmsfile != "thms":
+            get_huggingface_thms(f"{thmsfile}.txt")
         run_lean_script(
             thmsfile,
             start_of_index,

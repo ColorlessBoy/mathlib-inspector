@@ -44,7 +44,7 @@ jobs:
           source ~/.profile
           which lake
           lake build
-          poetry run python extract_thms.py -t thms -d colorlessboy/mathlib4-thms -s 0 -e 1000 -g --max-prop-size 2048 --max-proof-size 10000
+          poetry run python extract_thms.py -t thms_dep1 -d colorlessboy/mathlib4-thms -s 0 -e 1000 -g --max-prop-size 2048 --max-proof-size 10000
 
       - name: Generate deps
         env:
