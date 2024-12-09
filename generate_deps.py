@@ -6,7 +6,7 @@ import os
 import re 
 from pathlib import Path
 from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import sys
 
 def extract_names_from_file(filepath):
@@ -52,16 +52,21 @@ def process_file(file_path, previousThms):
     return {name for name in names if name not in previousThms}
 
 def get_ext_depth(previousThms: set[str], folder: str, max_workers=8):
-    """并行提取所有不在 previousThms 中的依赖。"""
-    deps = set()  # 存储依赖的常量
+    deps = set()
     thmsfiles = [Path(folder) / file for file in os.listdir(folder) if file.endswith(".txt")]
 
-    # 使用多线程并行处理
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(process_file, file, previousThms): file for file in thmsfiles}
-        
-        # 显示进度条并收集结果
-        for future in tqdm(as_completed(futures), total=len(futures), desc="Extracting dependencies"):
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        futures = []
+        for file in tqdm(thmsfiles):
+            futures.append(executor.submit(extract_names_from_file, file, previousThms))
+            # 控制提交任务的数量，防止内存占用过高
+            if len(futures) >= max_workers * 2:
+                for future in as_completed(futures):
+                    deps.update(future.result())
+                futures.clear()
+
+        # 处理剩余的任务
+        for future in as_completed(futures):
             deps.update(future.result())
 
     depslist = sorted(deps)
