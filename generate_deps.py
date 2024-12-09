@@ -82,7 +82,7 @@ if __name__ == "__main__":
     deps = get_ext_depth(previousThms, previous_thmsfile)
     if len(deps) > 0:
         print(f"开始写入{next_thmsfile}={len(deps)}...")
-        with open(f"{next_thmsfile}.txt", "r") as f:
+        with open(f"{next_thmsfile}.txt", "w") as f:
             f.writelines([line + "\n" for line in deps])
         print(f"成功写入{next_thmsfile}")
         upload_file(f"{next_thmsfile}.txt")
