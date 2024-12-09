@@ -209,7 +209,7 @@ if __name__ == "__main__":
             generate_new_words=generate_new_words
         )
         if generate_new_words > 0:
-            upload(f"{thmsfile}.txt")
-            upload("consts.txt")
+            upload_file(f"{thmsfile}.txt")
+            upload_file("consts.txt")
 
     zip_file = upload(thmsfile, start_of_index, end_of_index)
