@@ -49,7 +49,7 @@ jobs:
           git checkout -b workflow
           poetry run python extract_thms.py -t thms -d colorlessboy/mathlib4-thms -g --max-prop-size 2048 --max-proof-size 10000
 
-      - name: Generate theorems
+      - name: Generate deps
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}  # 从 GitHub Secrets 获取 Hugging Face token
         run: |

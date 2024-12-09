@@ -73,6 +73,24 @@ def zip_dataset(dataset_dir, output_zip):
         for file_path in tqdm(file_list, desc="压缩中", unit="文件"):  # 添加进度条
             zipf.write(file_path, os.path.relpath(file_path, dataset_dir))
 
+def upload_file(file: str):
+    # 上传数据集到 Hugging Face
+    api = HfApi()
+    repo_id = args.repo_id
+
+    try:
+        api.dataset_info(repo_id)
+        print(f"数据集 {repo_id} 已存在。")
+    except RepositoryNotFoundError:
+        print(f"数据集 {repo_id} 不存在，正在创建...")
+        api.create_repo(repo_id, repo_type="dataset")
+    api.upload_file(
+        path_or_fileobj=file,  # 传递文件对象
+        path_in_repo=file,
+        repo_id=repo_id,
+        repo_type="dataset",
+    )
+    print(file, "上传成功")  # 上传成功提示
 
 def upload(thmsfile: str, start_of_index: int, end_of_index: int):
     with open(f"{thmsfile}.txt", "r") as f:
@@ -181,17 +199,17 @@ if __name__ == "__main__":
     print(f"Generate flag: {args.generate}")
 
     if args.generate:
+        generate_new_words = 1 if thmsfile=="thms" else 0
         run_lean_script(
             thmsfile,
             start_of_index,
             end_of_index,
             max_prop_size,
             max_proof_size,
-            generate_new_words=1,
+            generate_new_words=generate_new_words
         )
-        os.system(f"git add {thmsfile}.txt")
-        os.system("git add consts.txt")
-        os.system(f'git commit -m "auto update {thmsfile}.txt and consts.txt"')
-        os.system("git push -f origin workflow:workflow")
+        if generate_new_words > 0:
+            upload(f"{thmsfile}.txt")
+            upload("consts.txt")
 
     zip_file = upload(thmsfile, start_of_index, end_of_index)
