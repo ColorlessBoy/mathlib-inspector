@@ -150,7 +150,7 @@ if __name__ == "__main__":
     previousThms, all_thmtxts = load_previous_thms(target)
     previous_thmsfile = all_thmtxts[-1]
     next_thmsfile = f"thms_dep{len(all_thmtxts)}"
-    deps = get_ext_depth(previousThms, previous_thmsfile, max_workers=max_workers)
+    deps = get_ext_depth(previousThms, previous_thmsfile, max_workers=max_workers, start=start, end=end)
     output_file = next_thmsfile
     if start is not None:
        output_file += "-" + start
