@@ -44,4 +44,4 @@ jobs:
           source ~/.profile
           which lake
           lake build
-          poetry run python extract_thms.py -t thms -d colorlessboy/mathlib4-thms -g --max-prop-size 1024 --max-proof-size 10000
+          poetry run python extract_thms.py -t thms -d colorlessboy/mathlib4-thms -g --max-prop-size 2048 --max-proof-size 200000

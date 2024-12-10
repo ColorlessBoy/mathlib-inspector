@@ -15,7 +15,7 @@ def get_huggingface_thms(head: str):
         filepath = hf_hub_download(repo_id=repo_id, repo_type="dataset", filename=name)
         print(f"download {name}")
         filepaths.append(filepath)
-    return file_names, filepaths
+    return parsed_files, filepaths
 
 def get_join_thms(head: str):
     filenames, filepaths = get_huggingface_thms(head)
