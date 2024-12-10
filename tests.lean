@@ -25,3 +25,9 @@ open Lean Meta
 #check @Iff.intro
 #eval printConstantDetails `Iff.refl
 #eval printConstantDetails `Iff.intro
+
+universe u
+theorem ax5 {p : Prop} (h : p) (_ : Type u) : p := h
+#eval printConstantDetails `ax5
+theorem ax5_2 {p : Prop} : p → ∀ (_: Type u), p := fun h _ ↦ h
+#eval printConstantDetails `ax5_2
