@@ -59,8 +59,10 @@ while start < end:
     # 更新范围
     start += increment
 
+    """
     # 是否继续
     cont = input("Continue to next range? (y/n): ")
     if cont.lower() != "y" and len(cont) > 0:
         print("Script terminated by user.")
         break
+    """
