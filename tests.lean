@@ -13,6 +13,9 @@ open Lean Meta
 -- #eval saveThmListToFile "thms.txt"
 -- #eval saveConstAndSizeToFile "constAndSize.txt" 2048 100000
 
+#check Nat
+#eval printConstantDetails `Set
+#eval printConstantDetails `setOf
 #check Equiv.Perm.signAux_mul
 #check mul_le_mul_left
 #eval printConstantDetails `Equiv.Perm.signAux_mul 1024 200000
