@@ -160,8 +160,8 @@ if __name__ == "__main__":
     output_file += ".txt"
     if len(deps) > 0:
       print(f"开始写入{output_file}={len(deps)}...")
-      with open(f"{output_file}.txt", "w") as f:
+      with open({output_file}, "w") as f:
         f.writelines([line + "\n" for line in deps])
       print(f"成功写入{output_file}")
-      upload_file(f"{output_file}.txt")
+      upload_file({output_file})
         
