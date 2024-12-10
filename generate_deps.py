@@ -153,14 +153,14 @@ if __name__ == "__main__":
     deps = get_ext_depth(previousThms, previous_thmsfile, max_workers=max_workers, start=start, end=end)
     output_file = next_thmsfile
     if start is not None:
-       output_file += "-" + start
+      output_file += "-" + str(start)
     if end is not None:
-        output_file += "-" + end
+      output_file += "-" + str(end)
     output_file += ".txt"
     if len(deps) > 0:
-        print(f"开始写入{output_file}={len(deps)}...")
-        with open(f"{output_file}.txt", "w") as f:
-            f.writelines([line + "\n" for line in deps])
-        print(f"成功写入{output_file}")
-        upload_file(f"{output_file}.txt")
+      print(f"开始写入{output_file}={len(deps)}...")
+      with open(f"{output_file}.txt", "w") as f:
+        f.writelines([line + "\n" for line in deps])
+      print(f"成功写入{output_file}")
+      upload_file(f"{output_file}.txt")
         
