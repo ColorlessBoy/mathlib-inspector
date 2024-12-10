@@ -164,5 +164,5 @@ if __name__ == "__main__":
       with open(output_file, "w") as f:
         f.writelines([line + "\n" for line in deps])
       print(f"成功写入{output_file}")
-      upload_file({output_file})
+      upload_file(output_file)
         
