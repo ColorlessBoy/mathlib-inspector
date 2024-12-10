@@ -217,7 +217,6 @@ if __name__ == "__main__":
             generate_new_words=generate_new_words
         )
         if generate_new_words > 0:
-            os.system("ls")
             upload_file(f"{thmsfile}.txt")
             upload_file("consts.txt")
 

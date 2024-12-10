@@ -15,7 +15,7 @@ open Lean Meta
 
 #check Equiv.Perm.signAux_mul
 #check mul_le_mul_left
-#eval printConstantDetails `Equiv.Perm.signAux_mul 1024 10000
+#eval printConstantDetails `Equiv.Perm.signAux_mul 1024 200000
 #eval printConstantDetails `tsum_nonneg
 
 #eval printConstantDetails `Iff
