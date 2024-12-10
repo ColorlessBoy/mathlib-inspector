@@ -11,11 +11,12 @@ import sys
 import zipfile
 
 def extract_names_from_file(filepath):
-    pattern = r"\(C (\w+)\)"
+    # 匹配 Lean 4 const 名字，包括命名空间和 Unicode 字符
+    pattern = r"\(C ([\w\.\-]+)\)"
     names = []
     with open(filepath, "r", encoding="utf-8") as file:
         for line in file:
-            names.extend(re.findall(pattern, line))
+            names.extend(re.findall(pattern, line, flags=re.UNICODE))
     return names
 
 def get_huggingface_thms():
