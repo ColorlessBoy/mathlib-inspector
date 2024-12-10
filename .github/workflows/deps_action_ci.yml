@@ -31,4 +31,4 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}  # 从 GitHub Secrets 获取 Hugging Face token
         run: |
-          poetry run python generate_deps.py 150000 200000
+          poetry run python generate_deps.py 200000 250000
