@@ -222,3 +222,5 @@ if __name__ == "__main__":
             upload_file("consts.txt")
 
     zip_file = upload(thmsfile, start_of_index, end_of_index)
+    shutil.rmtree(thmsfile)
+    os.remove(zip_file)

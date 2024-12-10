@@ -3,7 +3,7 @@ name: Lean Action CI
 on:
   push:
     tags:
-      - 'v*'  # 触发条件：每次推送带 v* 格式的标签时触发
+      - 'dep*'  # 触发条件：每次推送带 dep* 格式的标签时触发
 
 jobs:
   build:
@@ -31,17 +31,4 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}  # 从 GitHub Secrets 获取 Hugging Face token
         run: |
-          wget -q https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh
-          bash elan-init.sh -y
-          source ~/.elan/env
-          elan default leanprover/lean4:stable
-          lean --version
-          lake --version
-          lake exe cache get
-          lake update
-          find ./.lake/packages/mathlib -name "*.olean"
-          export LEAN_PATH="./.lake/packages/mathlib/.lake/build/lib:./.lake/build/lib"
-          source ~/.profile
-          which lake
-          lake build
-          poetry run python extract_thms.py -t thms -d colorlessboy/mathlib4-thms -g --max-prop-size 1024 --max-proof-size 10000
+          poetry run python generate_deps.py 0 100000
