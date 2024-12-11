@@ -31,3 +31,10 @@ theorem ax5 {p : Prop} (h : p) (_ : Type u) : p := h
 #eval printConstantDetails `ax5
 theorem ax5_2 {p : Prop} : p → ∀ (_: Type u), p := fun h _ ↦ h
 #eval printConstantDetails `ax5_2
+
+#check Exists
+#eval printConstantDetails `Exists
+
+def mp2 {w0 : Prop} {w1 : Prop} {w2 : Prop} (h1 : w1) (h2 : w2) (h3 : w2 -> w1 -> w0) : w0 := h3 h2 h1
+
+#eval printConstantDetails `mp2
