@@ -50,6 +50,7 @@ def load_previous_thms(target_file: str = None):
         if target_file is not None and thmfile.startswith(target_file):
             all_thmtxts = all_thmtxts[:idx+1]
             break
+    print('load_previous_thms', target_file, all_thmtxts)
     return thms, all_thmtxts
 
 def process_file(file_path, previousThms):
