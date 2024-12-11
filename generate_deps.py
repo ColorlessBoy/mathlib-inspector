@@ -43,13 +43,13 @@ def load_previous_thms(target_file: str = None):
     print("hf_thms", hf_thms)
     os.system("ls")
     all_thmtxts = [name[:-len(".txt")] for name in hf_thms]
+    all_thmtxts.sort(key=lambda x: int(x[len("thms_dep"):]) if x.startswith("thms_dep") else 0)
     for idx, thmfile in enumerate(hf_filepaths):
-        if target_file is not None and thmfile.startswith(target_file):
-            all_thmtxts = all_thmtxts[:idx]
-            break
         with open(thmfile, "r") as f:
             thms.extend([line.strip() for line in f.readlines()])
-    all_thmtxts.sort(key=lambda x: int(x[len("thms_dep"):]) if x.startswith("thms_dep") else 0)
+        if target_file is not None and thmfile.startswith(target_file):
+            all_thmtxts = all_thmtxts[:idx+1]
+            break
     return thms, all_thmtxts
 
 def process_file(file_path, previousThms):
