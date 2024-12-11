@@ -149,7 +149,8 @@ if __name__ == "__main__":
     max_workers = int(sys.argv[4]) if len(sys.argv) >= 5 else 32
 
     target = f"thms_dep{level}" if level is not None and level > 0 else None
-    previousThms, all_thmtxts = load_previous_thms(target)
+    previous_target = f"thms_dep{level-1}" if level is not None and level > 1 else "thms"
+    previousThms, all_thmtxts = load_previous_thms(previous_target)
     previous_thmsfile = all_thmtxts[-1]
     next_thmsfile = f"thms_dep{len(all_thmtxts)}"
     deps = get_ext_depth(previousThms, previous_thmsfile, max_workers=max_workers, start=start, end=end)
