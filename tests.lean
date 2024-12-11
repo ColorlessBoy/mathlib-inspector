@@ -38,3 +38,16 @@ theorem ax5_2 {p : Prop} : p → ∀ (_: Type u), p := fun h _ ↦ h
 def mp2 {w0 : Prop} {w1 : Prop} {w2 : Prop} (h1 : w1) (h2 : w2) (h3 : w2 -> w1 -> w0) : w0 := h3 h2 h1
 
 #eval printConstantDetails `mp2
+
+theorem exp1 (x y : Nat) (h : x = y) : x + 1 = y + 1 := by
+  rw [h]
+
+#eval printConstantDetails `exp1
+
+#check Eq.mpr
+
+#check congrArg
+
+#eval printConstantDetails `congrArg
+#eval printConstantDetails `Eq.rec
+#eval printConstantDetails `Eq.refl
