@@ -27,7 +27,7 @@ def get_huggingface_thms():
   pattern = r"thms(\w*)\.txt"
   # 用于存放解析后的结果
   parsed_files = [name for name in file_names if re.match(pattern, name)]
-  parsed_files.sort(key=lambda x: int(x[len("thms_dep"):]) if x.startswith("thms_dep") else 0)
+  parsed_files.sort(key=lambda x: int(x[len("thms_dep"):][:-4]) if x.startswith("thms_dep") else 0)
   filepaths: list[str] = []
   for name in parsed_files:
     if os.path.exists(name):
