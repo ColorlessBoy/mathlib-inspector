@@ -48,9 +48,8 @@ def load_previous_thms(target_file: str = None):
         with open(thmfile, "r") as f:
             thms.extend([line.strip() for line in f.readlines()])
         if target_file is not None and thmfile.startswith(target_file):
-            all_thmtxts = all_thmtxts[:idx+1]
-            break
-    print('load_previous_thms', target_file, all_thmtxts)
+            print('load_previous_thms', target_file, all_thmtxts[:idx+1])
+            return thms, all_thmtxts[:idx+1]
     return thms, all_thmtxts
 
 def process_file(file_path, previousThms):
