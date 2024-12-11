@@ -48,6 +48,7 @@ theorem exp1 (x y : Nat) (h : x = y) : x + 1 = y + 1 := by
 
 #check congrArg
 
+#eval printConstantDetails `notM
 #eval printConstantDetails `congrArg
 #eval printConstantDetails `Eq.rec
 #eval printConstantDetails `Eq.refl

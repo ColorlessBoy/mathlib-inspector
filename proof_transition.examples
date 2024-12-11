@@ -1,14 +1,25 @@
 
 Iff.refl
-  F(S(0))(Iff(#0)(#0))
-  L(S(0))(Iff.intro(#0)(#0)(L(#0)(#0))(L(#0)(#0)))
+  F(Prop,Iff(#0)(#0))
+  L(Prop,Iff.intro(#0)(#0)(L(#0,#0))(L(#0,#0)))
 
-Iff.intro
-  F(S(0))(F(S(0))(F(F(#1)(#1))(F(F(#1)(#3))(Iff(#3)(#2)))))
+state : F(Prop,Iff(#0)(#0))
+action: L(Prop,L(F(F(#0,#1),Iff(#1)(#1)),L(F(#1)(#2),#0(#1))))
+state : F(Prop,F(F(#0,#1),Iff(#1)(#1))) F(Prop, F(#0)(#1))
+action: L(Prop,L(#0)(#0))
+state : F(Prop,F(F(#0,#1),Iff(#1)(#1)))
+action: L(Prop,L(F(F(#0,#1),F(F(#1,#2),Iff(#2)(#2))),L(F(#1,#2), #0(#1))))
+state : F(Prop, F(F(#0,#1), F(F(#1,#2),Iff(#2)(#2)))) F(Prop,F(#1, #2))
+action: L(Prop,L(#0)(#0))
+state : F(Prop, F(F(#0,#1), F(F(#1,#2),Iff(#2)(#2)))) 
+action: L(Prop, Iff_intro(#0)(#0))
+state : Q.E.D.
+-----
 
-state : F(S(0))(Iff(#0)(#0))
-action: L(S(0),(F(F(#0)(#0))(F(F(#1)(#2))(Iff(#2)(#2))))(?0)(?1))
-        ---> Lambda(S(0), Iff.intro(#0)(#0))
-state : L(S(0), F(#0)(#0)) L(S(0), F(#0)(#0))
-action: L(S(0), L(#0)(#0))
-state : Q.E.D. 
+exp1
+  F(Nat)(F(Nat)(F(Eq(Nat)(#1)(#0))(Eq(Nat)(HAdd.hAdd(Nat)(Nat)(Nat)(instHAdd(Nat)(instAddNat))(#2)(OfNat.ofNat(Nat)((NatLiteral 1))(instOfNatNat((NatLiteral 1)))))(HAdd.hAdd(Nat)(Nat)(Nat)(instHAdd(Nat)(instAddNat))(#1)(OfNat.ofNat(Nat)((NatLiteral 1))(instOfNatNat((NatLiteral 1))))))))
+  L(Nat)(L(Nat)(L(Eq(Nat)(#1)(#0))(Eq.mpr(Eq(Nat)(HAdd.hAdd(Nat)(Nat)(Nat)(instHAdd(Nat)(instAddNat))(#2)(OfNat.ofNat(Nat)((NatLiteral 1))(instOfNatNat((NatLiteral 1)))))(HAdd.hAdd(Nat)(Nat)(Nat)(instHAdd(Nat)(instAddNat))(#1)(OfNat.ofNat(Nat)((NatLiteral 1))(instOfNatNat((NatLiteral 1))))))(Eq(Nat)(HAdd.hAdd(Nat)(Nat)(Nat)(instHAdd(Nat)(instAddNat))(#1)(OfNat.ofNat(Nat)((NatLiteral 1))(instOfNatNat((NatLiteral 1)))))(HAdd.hAdd(Nat)(Nat)(Nat)(instHAdd(Nat)(instAddNat))(#1)(OfNat.ofNat(Nat)((NatLiteral 1))(instOfNatNat((NatLiteral 1))))))(id(Eq(S(0))(Eq(Nat)(HAdd.hAdd(Nat)(Nat)(Nat)(instHAdd(Nat)(instAddNat))(#2)(OfNat.ofNat(Nat)((NatLiteral 1))(instOfNatNat((NatLiteral 1)))))(HAdd.hAdd(Nat)(Nat)(Nat)(instHAdd(Nat)(instAddNat))(#1)(OfNat.ofNat(Nat)((NatLiteral 1))(instOfNatNat((NatLiteral 1))))))(Eq(Nat)(HAdd.hAdd(Nat)(Nat)(Nat)(instHAdd(Nat)(instAddNat))(#1)(OfNat.ofNat(Nat)((NatLiteral 1))(instOfNatNat((NatLiteral 1)))))(HAdd.hAdd(Nat)(Nat)(Nat)(instHAdd(Nat)(instAddNat))(#1)(OfNat.ofNat(Nat)((NatLiteral 1))(instOfNatNat((NatLiteral 1)))))))(congrArg(Nat)(S(0))(#2)(#1)(L(Nat)(Eq(Nat)(HAdd.hAdd(Nat)(Nat)(Nat)(instHAdd(Nat)(instAddNat))(#0)(OfNat.ofNat(Nat)((NatLiteral 1))(instOfNatNat((NatLiteral 1)))))(HAdd.hAdd(Nat)(Nat)(Nat)(instHAdd(Nat)(instAddNat))(#2)(OfNat.ofNat(Nat)((NatLiteral 1))(instOfNatNat((NatLiteral 1)))))))(#0)))(Eq.refl(Nat)(HAdd.hAdd(Nat)(Nat)(Nat)(instHAdd(Nat)(instAddNat))(#1)(OfNat.ofNat(Nat)((NatLiteral 1))(instOfNatNat((NatLiteral 1)))))))))
+
+state : F(Nat)(F(Nat)(F(Eq(Nat)(#1)(#0))(Eq(Nat)(HAdd.hAdd(Nat)(Nat)(Nat)(instHAdd(Nat)(instAddNat))(#2)(OfNat.ofNat(Nat)((NatLiteral 1))(instOfNatNat((NatLiteral 1)))))(HAdd.hAdd(Nat)(Nat)(Nat)(instHAdd(Nat)(instAddNat))(#1)(OfNat.ofNat(Nat)((NatLiteral 1))(instOfNatNat((NatLiteral 1))))))))
+action: L(Nat)(L(Nat)(Eq.refl(Nat)(HAdd.hAdd(Nat)(Nat)(Nat)(instHAdd(Nat)(instAddNat))(#1)(OfNat.ofNat(Nat)((NatLiteral 1))(instOfNatNat((NatLiteral 1)))))))
+state : F(Nat)F(Nat)
