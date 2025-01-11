@@ -13,42 +13,66 @@ open Lean Meta
 -- #eval saveThmListToFile "thms.txt"
 -- #eval saveConstAndSizeToFile "constAndSize.txt" 2048 100000
 
-#check Nat
-#eval printConstantDetails `Set
-#eval printConstantDetails `setOf
-#check Equiv.Perm.signAux_mul
-#check mul_le_mul_left
-#eval printConstantDetails `Equiv.Perm.signAux_mul 1024 200000
-#eval printConstantDetails `tsum_nonneg
+#check OfNat.mk
+#eval printConstantDetails `Zero.toOfNat0
 
-#eval printConstantDetails `Iff
-#check @Iff.intro
-#eval printConstantDetails `Iff.refl
-#eval printConstantDetails `Iff.intro
+inductive MySum (α β : Type)  -- 泛型参数 α 和 β
+  | inl (a : α) : MySum α β  -- 左分支，包含类型 α 的值
+  | inr (b : β) : MySum α β  -- 右分支，包含类型 β 的值
 
-universe u
-theorem ax5 {p : Prop} (h : p) (_ : Type u) : p := h
-#eval printConstantDetails `ax5
-theorem ax5_2 {p : Prop} : p → ∀ (_: Type u), p := fun h _ ↦ h
-#eval printConstantDetails `ax5_2
+#check MySum
+#print MySum
+#eval printConstantDetails `MySum.inl
 
-#check Exists
-#eval printConstantDetails `Exists
+#check of_eq_true
+#eval printConstantDetails `of_eq_true
+#check trivial
+#eval printConstantDetails `ne_of_apply_ne
 
-def mp2 {w0 : Prop} {w1 : Prop} {w2 : Prop} (h1 : w1) (h2 : w2) (h3 : w2 -> w1 -> w0) : w0 := h3 h2 h1
+#check Not
+#check implies_congr
 
-#eval printConstantDetails `mp2
+universe u v
+#check Sort (max (u + 3) v)
+#check Sort (imax 0 u)
 
-theorem exp1 (x y : Nat) (h : x = y) : x + 1 = y + 1 := by
-  rw [h]
+#check (a:Sort u) -> (_ : Sort v)
+#check (a:Sort u) -> Sort v
 
-#eval printConstantDetails `exp1
+#check (a:Sort u) -> (Sort 0 : Sort 1)
 
-#check Eq.mpr
+#check Lean.Level.imax
 
-#check congrArg
+#check ne_of_apply_ne
+#eval printConstantDetails `ne_of_apply_ne
 
-#eval printConstantDetails `notM
-#eval printConstantDetails `congrArg
-#eval printConstantDetails `Eq.rec
-#eval printConstantDetails `Eq.refl
+#check exists₂_imp
+#eval printConstantDetails `exists₂_imp
+
+#check Decidable.not_imp_self
+#eval printConstantDetails `Decidable.not_imp_self
+#eval printConstantDetails `letFun
+#eval printConstantDetails `Decidable.not_imp_self
+#check Membership.mem
+#eval printConstantDetails `Membership.mem
+#check ne_of_mem_of_not_mem
+#check proof_irrel_heq
+#eval printConstantDetails `proof_irrel_heq
+#check proof_irrel
+#eval printConstantDetails `proof_irrel
+#eval printConstantDetails `rfl
+
+#check if_pos
+#eval printConstantDetails `if_pos
+
+#check ite
+#eval printConstantDetails `ite
+#check ite_pos
+#check ite_neg
+#check ite_congr
+#eval printConstantDetails `ite
+#check dif_pos
+
+#check Bool.noConfusionType
+#check Bool.noConfusion
+#check Decidable.decide

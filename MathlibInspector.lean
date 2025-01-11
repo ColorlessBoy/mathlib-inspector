@@ -97,6 +97,21 @@ def listAllConst: MetaM (List Name) := do
   let consts := env.constants.toList
   return consts.map (fun (name, _) => name)
 
+def getPrefixLevel (e : Expr) : Nat :=
+  match e with
+  | Expr.bvar _ => 100
+  | Expr.fvar _ => 100
+  | Expr.mvar _ => 100
+  | Expr.sort _ => 100
+  | Expr.const _ _ => 100
+  | Expr.app _ _=> 3
+  | Expr.lam _ _ _ _ => 2
+  | Expr.forallE _ _ _ _ => 1
+  | Expr.letE _ _ _ _ _ => 100
+  | Expr.lit _ => 100
+  | Expr.mdata _ expr => getPrefixLevel expr
+  | Expr.proj _ _ _ => 100
+
 -- 将表达式转化为前缀表达式的字符串
 partial def toPrefixExpr (e : Expr) (maxExprSize: Nat) : MetaM String := do
   let size := getExprSize e maxExprSize
@@ -106,36 +121,59 @@ partial def toPrefixExpr (e : Expr) (maxExprSize: Nat) : MetaM String := do
   | Expr.bvar idx => pure s!"#{idx}"
   | Expr.fvar fvarId => pure s!"(FreeVar {fvarId.name})"
   | Expr.mvar mvarId => pure s!"(MetaVar {mvarId.name})"
-  | Expr.sort lvl => pure s!"S({lvl})"
+  | Expr.sort lvl =>
+    if lvl == 0 then
+      return "Prop"
+    pure s!"Sort({lvl})"
   | Expr.const n _ => pure s!"{n}"
   | Expr.app f arg =>
-    let fStr ← toPrefixExpr f maxExprSize
-    let argsStr ← toPrefixExpr arg maxExprSize
-    pure s!"{fStr}({argsStr})"
+    let mut fStr ← toPrefixExpr f maxExprSize
+    let mut argsStr ← toPrefixExpr arg maxExprSize
+    let expr_level := getPrefixLevel e
+    let f_level := getPrefixLevel f
+    let arg_level := getPrefixLevel arg
+    if f_level < expr_level then
+      fStr := s!"({fStr})"
+    if arg_level <= expr_level then
+      argsStr := s!"({argsStr})"
+    pure s!"{fStr} {argsStr}"
   | Expr.lam _ t body _ =>
-    let bodyStr ← toPrefixExpr body maxExprSize
-    let t_prefix ← toPrefixExpr t maxExprSize
-    pure s!"L({t_prefix})({bodyStr})"
+    let mut bodyStr ← toPrefixExpr body maxExprSize
+    let mut t_prefix ← toPrefixExpr t maxExprSize
+    let expr_level := getPrefixLevel e
+    let t_level := getPrefixLevel t
+    let arg_level := getPrefixLevel body
+    if t_level <= expr_level then
+      t_prefix := s!"({t_prefix})"
+    if arg_level < expr_level then
+      bodyStr := s!"({bodyStr})"
+    pure s!"{t_prefix} => {bodyStr}"
   | Expr.forallE _ t body _ =>
-    let bodyStr ← toPrefixExpr body maxExprSize
-    let t_prefix ← toPrefixExpr t maxExprSize
-    pure s!"F({t_prefix})({bodyStr})"
-  | Expr.letE n t value body _ => do
-    let tStr ← toPrefixExpr t maxExprSize
+    let mut bodyStr ← toPrefixExpr body maxExprSize
+    let mut t_prefix ← toPrefixExpr t maxExprSize
+    let expr_level := getPrefixLevel e
+    let t_level := getPrefixLevel t
+    let arg_level := getPrefixLevel body
+    if t_level <= expr_level then
+      t_prefix := s!"({t_prefix})"
+    if arg_level < expr_level then
+      bodyStr := s!"({bodyStr})"
+    pure s!"{t_prefix} -> {bodyStr}"
+  | Expr.letE n _ value body _ => do
+    -- 展开 let 的定义
     let valueStr ← toPrefixExpr value maxExprSize
     let bodyStr ← toPrefixExpr body maxExprSize
-    pure s!"(Let ({n} : {tStr}) := {valueStr}; {bodyStr})"
+    pure s!"(Subst {n} := {valueStr} in {bodyStr})"
   | Expr.lit l =>
     match l with
     | Literal.natVal val => pure s!"(NatLiteral {val})"
     | Literal.strVal val => pure s!"(StrLiteral \"{val}\")"
-  | Expr.mdata data expr =>
+  | Expr.mdata _ expr =>
     let bodyExpr ← toPrefixExpr expr maxExprSize
-    pure s!"(Mdata {data} :: {bodyExpr})"
+    pure s!"{bodyExpr}"
   | Expr.proj typeName idx struct =>
     let prefixStruct ← toPrefixExpr struct maxExprSize
     pure s!"(Proj {typeName} {idx} {prefixStruct})"
-
 
 -- 提取常量的信息
 def extractConstantDetails (name : Name) : MetaM (Expr × Option Expr) := do
@@ -297,9 +335,9 @@ partial def toPrefixExprCompact (e : Expr) (maxSize: Nat) : MetaM String := do
     match l with
     | Literal.natVal val => pure s!"(NL {val})"
     | Literal.strVal val => pure s!"(SL \"{val}\")"
-  | Expr.mdata data expr =>
+  | Expr.mdata _ expr =>
     let bodyExpr ← toPrefixExprCompact expr maxSize
-    pure s!"(Mdata {data} :: {bodyExpr})"
+    pure s!"{bodyExpr}"
   | Expr.proj typeName idx struct =>
     let prefixStruct ← toPrefixExprCompact struct maxSize
     pure s!"(P {typeName} {idx} {prefixStruct})"
