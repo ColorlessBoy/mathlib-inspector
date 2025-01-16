@@ -58,12 +58,12 @@ theorem Iff.refl : {α : Prop} -> Iff α α := by
   apply (fun (h: α) => h)
   apply (fun (h: α) => h)
 
-set_option trace.Meta.debug true
+set_option trace.Meta.debug false
 
 example (P Q : Prop) : P → Q → P := by
-  abstract_proof (fun (h₁ : P) (h₂ : Q) => h₁)
+  proof_step (fun (h₁ : P) (h₂ : Q) => h₁)
 
 theorem Iff.refl2 : (α : Prop) -> Iff α α := by
-  abstract_proof (fun (β : Prop) => @Iff.intro β β)
-  abstract_proof (fun (α : Prop) (h : α) => h)
-  abstract_proof (fun (α : Prop) (h : α → α ) => h)
+  proof_step (fun (β : Prop) => @Iff.intro β β)
+  proof_step (fun (α : Prop) (h : α) => h)
+  proof_step (fun (α : Prop) (h : α → α ) => h)

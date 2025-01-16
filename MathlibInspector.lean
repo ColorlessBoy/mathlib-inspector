@@ -453,7 +453,7 @@ open Lean Elab Tactic Meta
 def proofStep (flag : Expr)
     (action goal: Expr)
     (diffContext sameContext : List (Expr × Expr) := [])
-    : MetaM (Option ((List Expr) × Array Expr)) := do
+    : MetaM (Option ((List Expr) × Nat)) := do
   -- 添加调试日志
   trace[Meta.debug] "ProofStep called with action: {action}, goal: {goal}"
   trace[Meta.debug] "Current diffContext: {diffContext}, sameContext: {sameContext}"
@@ -469,7 +469,7 @@ def proofStep (flag : Expr)
     let sameFVars := (sameContext.map (fun (fvar, _)=>fvar)).toArray
     newGoals ← newGoals.mapM (fun g => mkForallFVars sameFVars g)
     trace[Meta.debug] "New goals: {newGoals}"
-    return some (newGoals, sameFVars)
+    return some (newGoals, sameFVars.size)
 
   match flag with
   | Expr.forallE _ _ flagBody _ =>
@@ -510,33 +510,44 @@ def proofStep (flag : Expr)
       trace[Meta.debug] "Flag is not a forall"
       return none
 
-def postProcess (mainGoal: MVarId) (action: Expr) (solutionMVarIds : List MVarId) (sameFVars : Array Expr) : MetaM Unit := do
-  let solutions := solutionMVarIds.map (Expr.mvar)
-  trace[Meta.debug] "Collected solutions: {solutions}"
-  -- 组装最终证明项
-  let mut partSolutions : List Expr := []
-  for solution in solutions do
-    let mut g : Expr := solution
+def postProcess (depth: Nat) (sameFVars : List Expr) (action: Expr) (oriAction: Expr) (solutionMVarIds : List MVarId) : MetaM (Option Expr) := do
+  match depth with
+  | Nat.zero =>
+    let solutions := solutionMVarIds.map (Expr.mvar)
+    trace[Meta.debug] "Collected solutions: {solutionMVarIds}"
+    -- 组装最终证明项
+    let mut partSolutions : List Expr := []
+    for solution in solutions do
+      let mut g : Expr := solution
+      for fvar in sameFVars do
+        g := mkApp g fvar
+      for solution in partSolutions do
+        g := mkApp g solution
+      partSolutions := partSolutions ++ [g]
+    let mut rst := oriAction
     for fvar in sameFVars do
-      g := mkApp g fvar
+      rst := mkApp rst fvar
     for solution in partSolutions do
-      g := mkApp g solution
-    partSolutions := partSolutions ++ [g]
-  let mut rst := action
-  for fvar in sameFVars do
-    rst := mkApp rst fvar
-  for solution in partSolutions do
-    rst := mkApp rst solution
-  rst ← mkForallFVars sameFVars rst
-  trace[Meta.debug] "Collected rst: {rst}"
-  mainGoal.assign rst
+      rst := mkApp rst solution
+    rst ← mkLambdaFVars sameFVars.toArray rst
+    trace[Meta.debug] "Rst: {rst}"
+    return some rst
+  | Nat.succ preDepth =>
+    match action with
+    | Expr.lam name ty body info =>
+      withLocalDecl name info ty fun fVar => do
+        let body := body.instantiate1 fVar
+        return ← postProcess preDepth (sameFVars ++ [fVar]) body oriAction solutionMVarIds
+    | _ =>
+      trace[Meta.debug] "Action is not a lambda"
+      return none
 
 -- 定义 tactic，封装 proofStep 的逻辑
-syntax (name := abstractTactic) "abstract_proof " term : tactic
+syntax (name := proofStepTactic) "proof_step " term : tactic
 
-@[tactic abstractTactic] def evalAbstractTactic : Tactic := fun stx =>
+@[tactic proofStepTactic] def evalProofStepTactic : Tactic := fun stx =>
   match stx with
-  | `(tactic| abstract_proof $actionExpr) => do
+  | `(tactic| proof_step $actionExpr) => do
     -- 获取当前目标
     let mainGoal ← getMainGoal
     let goal ← mainGoal.getType
@@ -547,7 +558,7 @@ syntax (name := abstractTactic) "abstract_proof " term : tactic
 
     -- 调用 proofStep
     match ← proofStep actionType actionType goal with
-    | some (newGoals, sameFVars) =>
+    | some (newGoals, depth) =>
       if newGoals.isEmpty then
         -- 如果目标已被证明，表示成功结束
         trace[Meta.debug] "Goal proven successfully."
@@ -557,10 +568,14 @@ syntax (name := abstractTactic) "abstract_proof " term : tactic
         -- 替换目标并设置新目标
         let newGoalMVarExprs ← newGoals.mapM (fun type => mkFreshExprMVar type)
         let newGoalMVarIds := newGoalMVarExprs.map (Expr.mvarId!)
-        trace[Meta.debug] "mvarExprs {newGoalMVarExprs}, mvarIds {newGoalMVarIds}"
+        trace[Meta.debug] "newGoalMVarIds {newGoalMVarIds}"
         replaceMainGoal newGoalMVarIds
         withMainContext do
-          postProcess mainGoal action newGoalMVarIds sameFVars
+          match ← postProcess depth [] action action newGoalMVarIds with
+          | some solution =>
+            mainGoal.assign solution
+          | _ =>
+            throwError "PostProcess failed."
     | none =>
       throwError "Failed to abstract the proof step. Ensure action and goal are compatible."
   | _ => throwUnsupportedSyntax
