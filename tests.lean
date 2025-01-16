@@ -13,66 +13,57 @@ open Lean Meta
 -- #eval saveThmListToFile "thms.txt"
 -- #eval saveConstAndSizeToFile "constAndSize.txt" 2048 100000
 
-#check OfNat.mk
-#eval printConstantDetails `Zero.toOfNat0
 
-inductive MySum (α β : Type)  -- 泛型参数 α 和 β
-  | inl (a : α) : MySum α β  -- 左分支，包含类型 α 的值
-  | inr (b : β) : MySum α β  -- 右分支，包含类型 β 的值
-
-#check MySum
-#print MySum
-#eval printConstantDetails `MySum.inl
-
-#check of_eq_true
-#eval printConstantDetails `of_eq_true
-#check trivial
-#eval printConstantDetails `ne_of_apply_ne
-
-#check Not
-#check implies_congr
-
-universe u v
-#check Sort (max (u + 3) v)
-#check Sort (imax 0 u)
-
-#check (a:Sort u) -> (_ : Sort v)
-#check (a:Sort u) -> Sort v
-
-#check (a:Sort u) -> (Sort 0 : Sort 1)
-
-#check Lean.Level.imax
-
-#check ne_of_apply_ne
-#eval printConstantDetails `ne_of_apply_ne
-
-#check exists₂_imp
-#eval printConstantDetails `exists₂_imp
-
-#check Decidable.not_imp_self
-#eval printConstantDetails `Decidable.not_imp_self
-#eval printConstantDetails `letFun
-#eval printConstantDetails `Decidable.not_imp_self
-#check Membership.mem
-#eval printConstantDetails `Membership.mem
-#check ne_of_mem_of_not_mem
-#check proof_irrel_heq
-#eval printConstantDetails `proof_irrel_heq
+#check Eq.symm
+#eval printConstantDetails `Eq.symm
 #check proof_irrel
 #eval printConstantDetails `proof_irrel
-#eval printConstantDetails `rfl
+#eval printConstantDetails `proof_irrel_heq
+#check iff_of_true
+#check proof_irrel_heq
 
-#check if_pos
-#eval printConstantDetails `if_pos
+namespace Follow
 
-#check ite
-#eval printConstantDetails `ite
-#check ite_pos
-#check ite_neg
-#check ite_congr
-#eval printConstantDetails `ite
-#check dif_pos
+theorem Eq.symm : {α : Sort u} → {a : α} → {b : α} → a = b → b = a := by
+  intro _ a b
+  apply Eq.rec
+  apply Eq.refl
 
-#check Bool.noConfusionType
-#check Bool.noConfusion
-#check Decidable.decide
+axiom proof_irrel : {α : Prop} → {h₁ : α} → {h₂ : α} → h₁ = h₂
+
+theorem HEq.of_eq : {α : Sort u} -> {x : α} -> {y : α} -> Eq x y -> HEq x y := by
+  intro _ x y
+  apply Eq.rec
+  apply HEq.refl
+
+theorem proof_irrel_heq_1 : {α : Prop} -> {x : α} -> {y : α} -> HEq x y := by
+  intro _ x y
+  apply HEq.of_eq
+  apply proof_irrel
+
+theorem proof_irrel_heq : {α : Prop} -> {β : Prop} -> {x : α} -> {y : β} -> HEq x y := by
+  intro α β x y
+  apply @Eq.casesOn Prop α (fun (e : Prop) (f : Eq α e) => (Eq β e -> HEq (propext (iff_of_true x y)) f -> HEq x y)) β
+  intro eqba
+  apply @Eq.casesOn Prop α (fun (h : Prop) (_ : Eq α h) => ((i : h) -> HEq (propext (iff_of_true x i)) (Eq.refl α) -> HEq x i)) β
+  exact Eq.symm eqba
+  intro i h1
+  apply proof_irrel_heq_1
+  apply Eq.refl
+  apply HEq.refl
+
+theorem Iff.refl : {α : Prop} -> Iff α α := by
+  intro α
+  apply Iff.intro
+  apply (fun (h: α) => h)
+  apply (fun (h: α) => h)
+
+set_option trace.Meta.debug true
+
+example (P Q : Prop) : P → Q → P := by
+  abstract_proof (fun (h₁ : P) (h₂ : Q) => h₁)
+
+theorem Iff.refl2 : (α : Prop) -> Iff α α := by
+  abstract_proof (fun (β : Prop) => @Iff.intro β β)
+  abstract_proof (fun (α : Prop) (h : α) => h)
+  abstract_proof (fun (α : Prop) (h : α → α ) => h)
