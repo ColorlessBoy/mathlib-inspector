@@ -3,8 +3,7 @@ import Lean.Meta
 import Std.Data.HashMap
 import Mathlib
 
-open Lean Meta Tactic
-open Lean System Meta
+open Lean Elab Command Meta Tactic System
 
 -- 计算 Expr 的节点数，深度超过 maxSearchSize 时提前终止，返回 1
 partial def getExprSize (e : Expr) (reward : Nat) : Nat :=
@@ -102,11 +101,11 @@ def getPrefixLevel (e : Expr) : Nat :=
   | Expr.bvar _ => 100
   | Expr.fvar _ => 100
   | Expr.mvar _ => 100
-  | Expr.sort _ => 100
+  | Expr.sort _ => 3
   | Expr.const _ _ => 100
-  | Expr.app _ _=> 3
-  | Expr.lam _ _ _ _ => 2
-  | Expr.forallE _ _ _ _ => 1
+  | Expr.app _ _=> 4
+  | Expr.forallE _ _ _ _ => 2
+  | Expr.lam _ _ _ _ => 1
   | Expr.letE _ _ _ _ _ => 100
   | Expr.lit _ => 100
   | Expr.mdata _ expr => getPrefixLevel expr
@@ -275,95 +274,149 @@ def printConstantDetails (name : Name) (maxPropSize: Nat := 1024) (maxProofSize:
   | none =>
     logInfo s!"{name}\n  {typeStr}"
 
--- 打印常量的信息，包括类型和可选的值
-def printConstantDetailsV2 (name : String) (maxPropSize: Nat := 1024) (maxProofSize: Nat := 10000): MetaM Unit := do
-  let (type, value?) ← extractConstantDetails (parseName name)
-  let typeStr ← toPrefixExpr type maxPropSize
-  match value? with
-  | some value =>
-    let valueStr ← toPrefixExpr value maxProofSize
-    logInfo s!"{name}\n  {typeStr}\n  {valueStr}"
-  | none =>
-    logInfo s!"{name}\n  {typeStr}"
+-- 格式化 Lean 表达式为用户友好的字符串
+def formatExpr (e : Expr) : MetaM String := do
+  let formatted ← ppExpr e -- 使用 Lean 提供的 ppExpr 进行格式化
+  return formatted.pretty
 
-def extractPrefix (s : String) : String :=
-  if s.startsWith "Lean." then
-    s.drop 5 |>.take 2  -- 如果以 "Lean." 开头，取第6-7个字符
-  else
-    s.take 2            -- 否则取前两个字符
+def printConstant (name : Name) : MetaM Unit := do
+    let (ty, valOpt) ← extractConstantDetails name
+      -- 格式化类型和值为用户友好的字符串
+    let typeStr ← formatExpr ty
+    let valueStr ← match valOpt with
+      | some val => formatExpr val
+      | none => pure "<none>"
+    -- 打印输出
+    logInfo s!"\nConstant: {name}\nType:\n{typeStr}\n\nValue:\n{valueStr}"
 
--- 计算字符串的哈希值
-def stringHash (s : String) : UInt64 :=
-  let modulus : UInt64 := 4294967311  -- 一个比 2^32 稍大的素数
-  let multiplier : UInt64 := 131
-  s.foldl (fun acc c => (acc * multiplier + UInt64.ofNat c.toNat) % modulus) 5381
+def printLevel (lvl : Level) : MetaM String := do
+  match lvl with
+  | Level.zero   => pure s!"0"
+  | Level.succ l =>
+    let pre ← printLevel l
+    pure s!"({pre} + 1)"
+  | Level.max l r =>
+    let l ← printLevel l
+    let r ← printLevel r
+    pure s!"(max {l} {r})"
+  | Level.imax l r =>
+    let l ← printLevel l
+    let r ← printLevel r
+    pure s!"(imax {l} {r})"
+  | Level.param name => pure s!"{name}"
+  | Level.mvar id => pure s!"{id.name}"
 
-def hashConstName (s: String) : String :=
-  s
+def _cleanName (name : Name) : String :=
+  let nameStr := s!"{name}"
+  match nameStr.split (fun c => c = '.') with
+  | [] => nameStr  -- 如果没有点，直接返回空字符串
+  | hd :: _ => hd  -- 返回点前的部分
 
--- 将表达式转化为前缀表达式的字符串
-partial def toPrefixExprCompact (e : Expr) (maxSize: Nat) : MetaM String := do
-  let size := getExprSize e maxSize
-  if size >= maxSize then
-    return s!"Too large"
-  match e with
-  | Expr.bvar idx => pure s!"#{idx}"
-  | Expr.fvar fvarId => pure s!"(F {fvarId.name})"
-  | Expr.mvar mvarId => pure s!"(M {mvarId.name})"
-  | Expr.sort lvl => pure s!"(S {lvl})"
-  | Expr.const n _ =>
-    let n_hashed := hashConstName n.toString
-    pure s!"(C {n_hashed})"
+def _isBinderUsed (body : Expr) (offset : Nat := 0) : Bool :=
+  match body with
+  | Expr.bvar idx => idx == offset
+  | Expr.app f arg => _isBinderUsed f offset || _isBinderUsed arg offset
+  | Expr.lam _ ty body _ | Expr.forallE _ ty body _ =>
+      _isBinderUsed ty offset || _isBinderUsed body (offset + 1)
+  | _ => false
+
+def _transformExpr (proof : Expr) (context : List String) : MetaM String := do
+  match proof with
+  | Expr.bvar idx => pure context[idx]!
+  | Expr.fvar fId => pure s!"{← fId.getUserName}"
+  | Expr.mvar _ => pure s!"{proof}"
+  | Expr.sort lvl =>
+    let slvl ← printLevel lvl
+    pure s!"Sort {slvl}"
+  | Expr.const name _ => pure s!"@{name}"
   | Expr.app f arg =>
-    let fStr ← toPrefixExprCompact f maxSize
-    let argsStr ← toPrefixExprCompact arg maxSize
-    pure s!"(A {fStr} {argsStr})"
-  | Expr.lam _ t body _ =>
-    let bodyStr ← toPrefixExprCompact body maxSize
-    let t_prefix ← toPrefixExprCompact t maxSize
-    pure s!"(L {t_prefix} {bodyStr})"
-  | Expr.forallE _ t body _ =>
-    let bodyStr ← toPrefixExprCompact body maxSize
-    let t_prefix ← toPrefixExprCompact t maxSize
-    pure s!"(F {t_prefix} {bodyStr})"
-  | Expr.letE _ t value body _ => do
-    let tStr ← toPrefixExprCompact t maxSize
-    let valueStr ← toPrefixExprCompact value maxSize
-    let bodyStr ← toPrefixExprCompact body maxSize
-    pure s!"(Let {tStr} {valueStr} {bodyStr})"
-  | Expr.lit l =>
-    match l with
-    | Literal.natVal val => pure s!"(NL {val})"
-    | Literal.strVal val => pure s!"(SL \"{val}\")"
-  | Expr.mdata _ expr =>
-    let bodyExpr ← toPrefixExprCompact expr maxSize
-    pure s!"{bodyExpr}"
-  | Expr.proj typeName idx struct =>
-    let prefixStruct ← toPrefixExprCompact struct maxSize
-    pure s!"(P {typeName} {idx} {prefixStruct})"
-
-def getConstantDetailsCompact (name : Name) (maxPropSize: Nat := 1024) (maxProofSize: Nat := 10000) : MetaM String := do
-  let (type, value?) ← extractConstantDetails name
-  let propSize := getExprSize type maxPropSize
-  if propSize > maxPropSize then
-    throwError "prop size is too large"
-  let typeStr ← toPrefixExprCompact type maxPropSize
-  let hashed_name := hashConstName name.toString
-  match value? with
-  | some value =>
-    let proofSize := getExprSize value maxProofSize
-    if proofSize > maxProofSize then
-      pure s!"{hashed_name}\n{typeStr}"
+    let mut fStr ← _transformExpr f context
+    let mut argsStr ← _transformExpr arg context
+    let expr_level := getPrefixLevel proof
+    let f_level := getPrefixLevel f
+    let arg_level := getPrefixLevel arg
+    if f_level < expr_level then
+      fStr := s!"({fStr})"
+    if arg_level <= expr_level then
+      argsStr := s!"({argsStr})"
+    pure s!"{fStr} {argsStr}"
+  | Expr.lam name ty body bindInfo =>
+    let name := _cleanName name
+    let tyStr ← _transformExpr ty context
+    let mut bodyStr ← _transformExpr body ([s!"{name}"] ++ context)
+    let expr_level := getPrefixLevel proof
+    let body_level := getPrefixLevel body
+    if body_level < expr_level then
+      bodyStr := s!"({bodyStr})"
+    let mut argStr := s!"{name} : {tyStr}"
+    if !(_isBinderUsed body) then
+      argStr := s!"_ : {tyStr}"
+    if bindInfo.isImplicit then
+      argStr := "{" ++ argStr ++ "}"
     else
-      let valueStr ← toPrefixExprCompact value maxProofSize
-      pure s!"{hashed_name}\n{typeStr}\n{valueStr}"
-  | none =>
-    pure s!"{hashed_name}\n{typeStr}"
+      argStr := s!"({argStr})"
+    pure s!"fun {argStr} => {bodyStr}"
+  | Expr.forallE name ty body bindInfo =>
+    let name := _cleanName name
+    let tyStr ← _transformExpr ty context
+    let mut bodyStr ← _transformExpr body ([s!"{name}"] ++ context)
+    let exprLevel := getPrefixLevel proof
+    let bodyLevel := getPrefixLevel body
+    if bodyLevel < exprLevel then
+      bodyStr := s!"({bodyStr})"
+    let mut argStr := s!"{name} : {tyStr}"
+    if !(_isBinderUsed body) then
+      let typeLevel := getPrefixLevel ty
+      if typeLevel < exprLevel then
+        argStr := s!"({tyStr})"
+      else
+        argStr := s!"{tyStr}"
+    else
+      if bindInfo.isImplicit then
+        argStr := "{" ++ argStr ++ "}"
+      else
+        argStr := s!"({argStr})"
+    pure s!"{argStr} -> {bodyStr}"
+  | Expr.letE _ _ _ _ _ => pure s!"{proof}"
+  | Expr.lit _ => pure s!"{proof}"
+  | Expr.mdata _ _ => pure s!"{proof}"
+  | Expr.proj _ _ _ => pure s!"{proof}"
+
+def transformExpr (name : Name) : MetaM Unit := do
+  let env ← getEnv
+  match env.find? name with
+  | some (ConstantInfo.axiomInfo ax) =>
+    -- 公理：只有类型，没有值
+    let typeStr ← _transformExpr ax.type []
+    logInfo s!"axiom {name} : {typeStr}"
+  | some (ConstantInfo.thmInfo thm) =>
+    -- 定理：有类型和证明值
+    let typeStr ← _transformExpr thm.type []
+    let valueStr ← _transformExpr thm.value []
+    logInfo s!"theorem {name} : {typeStr} := \n  {valueStr}"
+  | some (ConstantInfo.defnInfo defn) =>
+    -- 定义：有类型和定义体
+    let typeStr ← _transformExpr defn.type []
+    let valueStr ← _transformExpr defn.value []
+    logInfo s!"def {name} : {typeStr} := \n  {valueStr}"
+  | some (ConstantInfo.ctorInfo ctor) =>
+    -- 构造函数：有类型，但无单独定义值
+    let typeStr ← _transformExpr ctor.type []
+    logInfo s!"axiom {ctor.name} : {typeStr}"
+  | some (ConstantInfo.recInfo rec) =>
+    -- 消去规则（recursor）：有类型，但无定义值
+    let typeStr ← _transformExpr rec.type []
+    logInfo s!"axiom {rec.name} : {typeStr}"
+  | some (ConstantInfo.inductInfo ind) =>
+    -- 归纳定义：有类型，但无定义值
+    let typeStr ← _transformExpr ind.type []
+    logInfo s!"axiom {ind.name} : {typeStr}"
+  | _ => throwError "Constant {name} not found or is not supported."
 
 -- 在 IO 中运行 MetaM
 def runMetaMInIO (metaCtx: Meta.Context) (metaState: Meta.State) (coreCtx: Core.Context) (coreStateRef : ST.Ref IO.RealWorld Core.State
 )  (filePath: String) (constName : String) (maxPropSize: Nat := 1024) (maxProofSize: Nat := 10000) : IO Unit := do
-  let res ← ((getConstantDetailsCompact (parseName constName) maxPropSize maxProofSize).run metaCtx metaState coreCtx coreStateRef).toBaseIO
+  let res ← ((getConstantDetails (parseName constName) maxPropSize maxProofSize).run metaCtx metaState coreCtx coreStateRef).toBaseIO
   match res with
   | .ok (info, _) =>
     let output := info
@@ -413,8 +466,7 @@ def mainLoop (outputDir: String) (thmsFilePath: String) (startThmIdx: Nat) (endT
 
   -- 逐一处理文件中的常量名称
   for (idx, constName) in thmNames.enum do
-    let hashedConstName := hashConstName constName
-    let filePath := s!"{outputDir}/{hashedConstName}.txt"
+    let filePath := s!"{outputDir}/{constName}.txt"
     let fileExists ← FilePath.pathExists filePath
     if fileExists then
       IO.println s!"File {filePath} already exists."
