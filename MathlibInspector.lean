@@ -96,7 +96,7 @@ def listAllConst: MetaM (List Name) := do
   let consts := env.constants.toList
   return consts.map (fun (name, _) => name)
 
-def getPrefixLevel (e : Expr) : Nat :=
+def getPreferenceLevel (e : Expr) : Nat :=
   match e with
   | Expr.bvar _ => 100
   | Expr.fvar _ => 100
@@ -108,7 +108,7 @@ def getPrefixLevel (e : Expr) : Nat :=
   | Expr.lam _ _ _ _ => 1
   | Expr.letE _ _ _ _ _ => 100
   | Expr.lit _ => 100
-  | Expr.mdata _ expr => getPrefixLevel expr
+  | Expr.mdata _ expr => getPreferenceLevel expr
   | Expr.proj _ _ _ => 100
 
 -- 将表达式转化为前缀表达式的字符串
@@ -128,9 +128,9 @@ partial def toPrefixExpr (e : Expr) (maxExprSize: Nat) : MetaM String := do
   | Expr.app f arg =>
     let mut fStr ← toPrefixExpr f maxExprSize
     let mut argsStr ← toPrefixExpr arg maxExprSize
-    let expr_level := getPrefixLevel e
-    let f_level := getPrefixLevel f
-    let arg_level := getPrefixLevel arg
+    let expr_level := getPreferenceLevel e
+    let f_level := getPreferenceLevel f
+    let arg_level := getPreferenceLevel arg
     if f_level < expr_level then
       fStr := s!"({fStr})"
     if arg_level <= expr_level then
@@ -139,9 +139,9 @@ partial def toPrefixExpr (e : Expr) (maxExprSize: Nat) : MetaM String := do
   | Expr.lam _ t body _ =>
     let mut bodyStr ← toPrefixExpr body maxExprSize
     let mut t_prefix ← toPrefixExpr t maxExprSize
-    let expr_level := getPrefixLevel e
-    let t_level := getPrefixLevel t
-    let arg_level := getPrefixLevel body
+    let expr_level := getPreferenceLevel e
+    let t_level := getPreferenceLevel t
+    let arg_level := getPreferenceLevel body
     if t_level <= expr_level then
       t_prefix := s!"({t_prefix})"
     if arg_level < expr_level then
@@ -150,9 +150,9 @@ partial def toPrefixExpr (e : Expr) (maxExprSize: Nat) : MetaM String := do
   | Expr.forallE _ t body _ =>
     let mut bodyStr ← toPrefixExpr body maxExprSize
     let mut t_prefix ← toPrefixExpr t maxExprSize
-    let expr_level := getPrefixLevel e
-    let t_level := getPrefixLevel t
-    let arg_level := getPrefixLevel body
+    let expr_level := getPreferenceLevel e
+    let t_level := getPreferenceLevel t
+    let arg_level := getPreferenceLevel body
     if t_level <= expr_level then
       t_prefix := s!"({t_prefix})"
     if arg_level < expr_level then
@@ -274,21 +274,6 @@ def printConstantDetails (name : Name) (maxPropSize: Nat := 1024) (maxProofSize:
   | none =>
     logInfo s!"{name}\n  {typeStr}"
 
--- 格式化 Lean 表达式为用户友好的字符串
-def formatExpr (e : Expr) : MetaM String := do
-  let formatted ← ppExpr e -- 使用 Lean 提供的 ppExpr 进行格式化
-  return formatted.pretty
-
-def printConstant (name : Name) : MetaM Unit := do
-    let (ty, valOpt) ← extractConstantDetails name
-      -- 格式化类型和值为用户友好的字符串
-    let typeStr ← formatExpr ty
-    let valueStr ← match valOpt with
-      | some val => formatExpr val
-      | none => pure "<none>"
-    -- 打印输出
-    logInfo s!"\nConstant: {name}\nType:\n{typeStr}\n\nValue:\n{valueStr}"
-
 def printLevel (lvl : Level) : MetaM String := do
   match lvl with
   | Level.zero   => pure s!"0"
@@ -306,46 +291,72 @@ def printLevel (lvl : Level) : MetaM String := do
   | Level.param name => pure s!"{name}"
   | Level.mvar id => pure s!"{id.name}"
 
-def _cleanName (name : Name) : String :=
+def _cleanName (name : Name) (context : List String) : String :=
   let nameStr := s!"{name}"
-  match nameStr.split (fun c => c = '.') with
-  | [] => nameStr  -- 如果没有点，直接返回空字符串
-  | hd :: _ => hd  -- 返回点前的部分
+  let baseName := match nameStr.split (fun c => c = '.') with
+    | [] => nameStr
+    | hd :: _ => hd
+  if context.length == 0 then
+    baseName
+  else
+  -- 递归地添加后缀数字，直到名字不在 context 中
+  let rec getUniqueName (suffix : Nat) (base : String) : String :=
+    match suffix with
+    | Nat.zero => s!"{base}{context.length}"
+    | Nat.succ pre =>
+      let idx := context.length - suffix
+      let candidate := if idx == 0 then base else s!"{base}{idx}"
+      if candidate ∈ context then
+        getUniqueName pre base
+      else
+        candidate
+  getUniqueName context.length baseName
 
 def _isBinderUsed (body : Expr) (offset : Nat := 0) : Bool :=
   match body with
   | Expr.bvar idx => idx == offset
   | Expr.app f arg => _isBinderUsed f offset || _isBinderUsed arg offset
   | Expr.lam _ ty body _ | Expr.forallE _ ty body _ =>
-      _isBinderUsed ty offset || _isBinderUsed body (offset + 1)
+    _isBinderUsed ty offset || _isBinderUsed body (offset + 1)
+  | Expr.letE _ _ value body _ =>
+    _isBinderUsed value offset || _isBinderUsed body (offset + 1)
   | _ => false
 
-def _transformExpr (proof : Expr) (context : List String) : MetaM String := do
-  match proof with
+def _transformExpr (expr : Expr) (context : List String) : MetaM String := do
+  match expr with
   | Expr.bvar idx => pure context[idx]!
   | Expr.fvar fId => pure s!"{← fId.getUserName}"
-  | Expr.mvar _ => pure s!"{proof}"
+  | Expr.mvar _ => pure s!"{expr}"
   | Expr.sort lvl =>
-    let slvl ← printLevel lvl
-    pure s!"Sort {slvl}"
-  | Expr.const name _ => pure s!"@{name}"
+    match lvl with
+    | Level.zero   => pure "Prop"
+    | Level.succ prelvl   =>
+      let slvl ← printLevel prelvl
+      pure s!"Type {slvl}"
+    | _      =>
+      let slvl ← printLevel lvl
+      pure s!"Sort {slvl}"
+  | Expr.const name _ => pure s!"{name}"
   | Expr.app f arg =>
     let mut fStr ← _transformExpr f context
-    let mut argsStr ← _transformExpr arg context
-    let expr_level := getPrefixLevel proof
-    let f_level := getPrefixLevel f
-    let arg_level := getPrefixLevel arg
-    if f_level < expr_level then
+    let mut argStr ← _transformExpr arg context
+    let expr_level := getPreferenceLevel expr
+    let f_level := getPreferenceLevel f
+    let arg_level := getPreferenceLevel arg
+    if fStr != "Prop" && fStr != "Type" && f_level < expr_level then
       fStr := s!"({fStr})"
-    if arg_level <= expr_level then
-      argsStr := s!"({argsStr})"
-    pure s!"{fStr} {argsStr}"
+    fStr := match f with
+    | Expr.const _ _ => s!"@{fStr}"
+    | _ => fStr
+    if argStr != "Prop" && argStr != "Type" && arg_level <= expr_level then
+      argStr := s!"({argStr})"
+    pure s!"{fStr} {argStr}"
   | Expr.lam name ty body bindInfo =>
-    let name := _cleanName name
+    let name := _cleanName name context
     let tyStr ← _transformExpr ty context
     let mut bodyStr ← _transformExpr body ([s!"{name}"] ++ context)
-    let expr_level := getPrefixLevel proof
-    let body_level := getPrefixLevel body
+    let expr_level := getPreferenceLevel expr
+    let body_level := getPreferenceLevel body
     if body_level < expr_level then
       bodyStr := s!"({bodyStr})"
     let mut argStr := s!"{name} : {tyStr}"
@@ -357,17 +368,17 @@ def _transformExpr (proof : Expr) (context : List String) : MetaM String := do
       argStr := s!"({argStr})"
     pure s!"fun {argStr} => {bodyStr}"
   | Expr.forallE name ty body bindInfo =>
-    let name := _cleanName name
+    let name := _cleanName name context
     let tyStr ← _transformExpr ty context
     let mut bodyStr ← _transformExpr body ([s!"{name}"] ++ context)
-    let exprLevel := getPrefixLevel proof
-    let bodyLevel := getPrefixLevel body
+    let exprLevel := getPreferenceLevel expr
+    let bodyLevel := getPreferenceLevel body
     if bodyLevel < exprLevel then
       bodyStr := s!"({bodyStr})"
     let mut argStr := s!"{name} : {tyStr}"
     if !(_isBinderUsed body) then
-      let typeLevel := getPrefixLevel ty
-      if typeLevel < exprLevel then
+      let typeLevel := getPreferenceLevel ty
+      if typeLevel <= exprLevel then
         argStr := s!"({tyStr})"
       else
         argStr := s!"{tyStr}"
@@ -377,43 +388,70 @@ def _transformExpr (proof : Expr) (context : List String) : MetaM String := do
       else
         argStr := s!"({argStr})"
     pure s!"{argStr} -> {bodyStr}"
-  | Expr.letE _ _ _ _ _ => pure s!"{proof}"
-  | Expr.lit _ => pure s!"{proof}"
-  | Expr.mdata _ _ => pure s!"{proof}"
-  | Expr.proj _ _ _ => pure s!"{proof}"
+  | Expr.letE name _ value body _ =>
+    let name := _cleanName name context
+    let value ← _transformExpr value context
+    let body ← _transformExpr body ([name] ++ context)
+    pure s!"(let {name} := {value} ; {body})"
+  | Expr.lit _ => pure s!"({expr})"
+  | Expr.mdata _ _ => pure s!"({expr})"
+  | Expr.proj _ _ _ => pure s!"({expr})"
 
-def transformExpr (name : Name) : MetaM Unit := do
+def transformExpr (name : Name) : MetaM String := do
   let env ← getEnv
   match env.find? name with
   | some (ConstantInfo.axiomInfo ax) =>
     -- 公理：只有类型，没有值
     let typeStr ← _transformExpr ax.type []
-    logInfo s!"axiom {name} : {typeStr}"
-  | some (ConstantInfo.thmInfo thm) =>
-    -- 定理：有类型和证明值
-    let typeStr ← _transformExpr thm.type []
-    let valueStr ← _transformExpr thm.value []
-    logInfo s!"theorem {name} : {typeStr} := \n  {valueStr}"
+    pure s!"axiom {name} : {typeStr}"
   | some (ConstantInfo.defnInfo defn) =>
     -- 定义：有类型和定义体
     let typeStr ← _transformExpr defn.type []
     let valueStr ← _transformExpr defn.value []
-    logInfo s!"def {name} : {typeStr} := \n  {valueStr}"
+    let isNonComp := defn.value.hasExprMVar || match defn.safety with
+      | DefinitionSafety.safe => false
+      | DefinitionSafety.unsafe => true
+      | DefinitionSafety.partial => true
+    if isNonComp then
+      pure s!"noncomputable def {name} : {typeStr} := \n  {valueStr}"
+    else
+      pure s!"def {name} : {typeStr} := \n  {valueStr}"
+  | some (ConstantInfo.thmInfo thm) =>
+    -- 定理：有类型和证明值
+    let typeStr ← _transformExpr thm.type []
+    let valueStr ← _transformExpr thm.value []
+    pure s!"theorem {name} : {typeStr} := \n  {valueStr}"
   | some (ConstantInfo.ctorInfo ctor) =>
     -- 构造函数：有类型，但无单独定义值
     let typeStr ← _transformExpr ctor.type []
-    logInfo s!"axiom {ctor.name} : {typeStr}"
+    pure s!"axiom {ctor.name} : {typeStr}"
   | some (ConstantInfo.recInfo rec) =>
     -- 消去规则（recursor）：有类型，但无定义值
     let typeStr ← _transformExpr rec.type []
-    logInfo s!"axiom {rec.name} : {typeStr}"
+    pure s!"axiom {rec.name} : {typeStr}"
   | some (ConstantInfo.inductInfo ind) =>
     -- 归纳定义：有类型，但无定义值
     let typeStr ← _transformExpr ind.type []
-    logInfo s!"axiom {ind.name} : {typeStr}"
+    pure s!"axiom {ind.name} : {typeStr}"
+  | some (ConstantInfo.opaqueInfo val) =>
+    let typeStr ← _transformExpr val.value []
+    pure s!"axiom {val.name} : {typeStr}"
+  | some (ConstantInfo.quotInfo val) =>
+    match val.kind with
+    | QuotKind.type =>
+      pure "axiom Quot : {α : Sort u} -> (α -> α -> Prop) -> Sort u"
+    | QuotKind.ctor =>
+      pure "axiom Quot.mk : {α : Sort u} -> (r : α -> α -> Prop) -> α -> @Quot α r"
+    | QuotKind.lift =>
+      pure "axiom Quot.lift : {α : Sort u} -> {r : α -> α -> Prop} -> {β : Sort v} -> (f : α -> β) -> ((a : α) -> (b : α) -> r a b -> @Eq β (f a) (f b)) -> @Quot α r -> β"
+    | QuotKind.ind =>
+      pure "axiom Quot.ind : {α : Sort u} -> {r : α -> α -> Prop} -> {β : @Quot α r -> Prop} -> ((a : α) -> β (@Quot.mk α r a)) -> (q : @Quot α r) -> β q"
   | _ => throwError "Constant {name} not found or is not supported."
 
--- 在 IO 中运行 MetaM
+def printTransformExpr (name : Name) : MetaM Unit := do
+  let code ← transformExpr name
+  logInfo code
+
 def runMetaMInIO (metaCtx: Meta.Context) (metaState: Meta.State) (coreCtx: Core.Context) (coreStateRef : ST.Ref IO.RealWorld Core.State
 )  (filePath: String) (constName : String) (maxPropSize: Nat := 1024) (maxProofSize: Nat := 10000) : IO Unit := do
   let res ← ((getConstantDetails (parseName constName) maxPropSize maxProofSize).run metaCtx metaState coreCtx coreStateRef).toBaseIO
