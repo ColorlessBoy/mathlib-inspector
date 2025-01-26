@@ -362,10 +362,10 @@ def _transformExpr (expr : Expr) (context : List String) : MetaM String := do
     let mut argStr := s!"{name} : {tyStr}"
     if !(_isBinderUsed body) then
       argStr := s!"_ : {tyStr}"
-    if bindInfo.isImplicit then
-      argStr := "{" ++ argStr ++ "}"
-    else
+    if bindInfo.isExplicit then
       argStr := s!"({argStr})"
+    else
+      argStr := "{" ++ argStr ++ "}"
     pure s!"fun {argStr} => {bodyStr}"
   | Expr.forallE name ty body bindInfo =>
     let name := _cleanName name context
@@ -669,3 +669,9 @@ syntax (name := proofStepTactic) "proof_step " term : tactic
     | none =>
       throwError "Failed to abstract the proof step. Ensure action and goal are compatible."
   | _ => throwUnsupportedSyntax
+
+def isGeneratedCasesOn (name : Name) : MetaM Bool := do
+  if name.toString |>.endsWith "casesOn" then
+    pure true
+  else
+    pure false
