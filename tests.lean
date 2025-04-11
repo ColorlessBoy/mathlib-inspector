@@ -3,16 +3,15 @@
 import MathlibInspector
 
 
-set_option pp.all true
+#print LinearOrderedField
+#print Distrib.left_distrib
 
 namespace Flow
 universe u v w u_1
 #print Eq
-#print Eq.rec
-#print Eq.casesOn
-#print Or
-#print Or.rec
-#print Or.casesOn
+set_option pp.all true
+#print WType.elim
+#print WType.below
 -- inductive HEq : {α : Sort u} -> α -> {β : Sort u} -> β -> Prop where
   -- | refl : {α : Sort u} -> (a : α) -> @HEq α a α a
 -- inductive Eq : {α : Sort u_1} -> α -> α -> Prop where
@@ -348,3 +347,5 @@ theorem ne_true_of_eq_false : ∀ {b : Bool}, @Eq.{1} Bool b Bool.false → Flow
 #eval printTransformExpr `ne_true_of_eq_false
 
 #check Decidable.isFalse (fun h => False.elim h)
+
+#eval printTransformExpr `eq_iff_eq_cancel_right
