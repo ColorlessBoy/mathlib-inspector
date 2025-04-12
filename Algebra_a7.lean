@@ -1,5 +1,4 @@
 import Mathlib
-import Aesop
 
 theorem Algebra_a7 (n k : ℕ) (a : ℕ → ℝ) (n_pos : 0 < n) (k_pos : 0 < k) (ha : ∀ i, a i ∈ Set.Icc 1 (2^k)) :
   ∑ i in Finset.range n, a i / Real.sqrt (∑ j in Finset.range (i + 1), (a j)^2) ≤ 4 * Real.sqrt (k * n) := by
@@ -99,7 +98,7 @@ theorem Algebra_a7 (n k : ℕ) (a : ℕ → ℝ) (n_pos : 0 < n) (k_pos : 0 < k)
           = ∑ j in Finset.range k, ∑ i in M (j+1), a i / Real.sqrt (∑ j in Finset.range (i+1), (a j)^2) := by
     rw [← Finset.sum_biUnion M_disjoint, M_biUnion]
 
-  have Hbound : ∀ j < k, ∑ i in M (j+1), a i / Real.sqrt (∑ j in Finset.range (i+1), (a j)^2)
+  have Hbound : ∀ j < k, ∑ i in M (j+1), a i / Real.sqrt (∑ l in Finset.range (i+1), (a l)^2)
                   ≤ 4 * Real.sqrt ((M (j+1)).card) := by
     intro j hjk
     let p := (M j).card
@@ -112,7 +111,79 @@ theorem Algebra_a7 (n k : ℕ) (a : ℕ → ℝ) (n_pos : 0 < n) (k_pos : 0 < k)
       simp
       intro h
       exact h.out.right
-    sorry
+    have h_lower (i : ℕ) (hi : i ∈ M (j+1)) : ((Finset.range (i+1)).filter (fun l => l ∈ M (j+1))).card • (2 ^ j)^2 ≤ ∑ l in Finset.range (i+1), (a l)^2 := by
+      rw [← Finset.sum_const, Finset.sum_filter]
+      apply Finset.sum_le_sum
+      intro l hl
+      by_cases h : l ∈ M (j + 1)
+      · rw [if_pos h, pow_two, pow_two]
+        apply mul_self_le_mul_self
+        apply pow_nonneg (by simp)
+        simp [M] at h
+        apply Or.elim h.right
+        · intro ⟨h1, h2⟩
+          rw [h1, h2]
+          simp
+        intro ⟨h1, _⟩
+        exact le_of_lt h1
+      rw [if_neg]
+      apply pow_two_nonneg
+      assumption
+    have pow_two_nonneg: (0:ℝ) < (2 ^ j) ^ 2 := by
+      apply pow_pos
+      simp
+    have h_lower2 (i : ℕ) (hi : i ∈ M (j + 1)) : (0:ℝ) < ((Finset.range (i+1)).filter (fun l => l ∈ M (j+1))).card • (2 ^ j)^2 := by
+      have left_pos : (0:ℝ) < ((Finset.range (i+1)).filter (fun l => l ∈ M (j+1))).card := by
+        let S := Finset.filter (fun l => l ∈ M (j + 1)) (Finset.range (i + 1))
+        have h₁ : i ∈ Finset.range (i + 1) := Finset.mem_range_succ_iff.mpr (le_refl i)
+        have h₂ : i ∈ S := Finset.mem_filter.mpr ⟨h₁, hi⟩
+        exact_mod_cast Finset.card_pos.mpr ⟨i, h₂⟩
+      have pos := mul_pos left_pos pow_two_nonneg
+      simp
+      exact pos
+    have h_lower3 (i : ℕ) (hi : i ∈ M (j + 1)) : a i / √(∑ l ∈ Finset.range (i + 1), a l ^ 2) ≤ (2 ^ (j + 1)) / √(((Finset.range (i+1)).filter (fun l => l ∈ M (j+1))).card • (2 ^ j)^2) := by
+      apply div_le_div₀ (by simp) (h_upper i hi)
+      rw [Real.sqrt_pos]
+      exact h_lower2 i hi
+      exact Real.sqrt_le_sqrt (h_lower i hi)
+    have h1 := Finset.sum_le_sum h_lower3
+    have h_eq : ∑ i ∈ M (j + 1), 2 ^ (j + 1) / √((Finset.filter (fun l => l ∈ M (j + 1)) (Finset.range (i + 1))).card • (2 ^ j) ^ 2) = ∑ i ∈ Finset.range ((M (j + 1)).card), 2 ^ (j + 1) / √((i + 1) • (2 ^ j) ^ 2) := by sorry
+    apply le_trans h1
+    apply le_of_eq_of_le h_eq
+    let f := fun (i:ℕ) => √i
+    have h_upper2 (i: ℕ)(hi : i ∈ Finset.range (M (j + 1)).card): 2 ^ (j + 1) / √((i + 1) • (2 ^ j) ^ 2) ≤ 4 * f (i+1) - 4 * f i := by
+      have h0 : 0 < (i: ℝ) + 1 := by exact_mod_cast Nat.add_one_pos i
+      have h1 : 0 ≤ (i: ℝ) + 1 := le_of_lt h0
+      simp [f]
+      rw [div_le_iff₀', Real.sqrt_mul, mul_comm √(↑i + 1), mul_assoc, pow_succ]
+      apply mul_le_mul (by simp)
+      rw [← mul_sub, ←  mul_assoc _ 4, mul_comm _ 4]
+      have : 2 * (√(↑i + 1) +  √↑i) ≤ 4 * √(↑i + 1) := by
+        have : (4 : ℝ) = 2 + 2 := by norm_num
+        rw [mul_add, this, add_mul]
+        apply add_le_add_left
+        field_simp
+      have : 2 * (√(↑i + 1) +  √↑i) * (√(↑i + 1) - √↑i) ≤ 4 * √(↑i + 1) * (√(↑i + 1) - √↑i) := by
+        rw [mul_le_mul_right]
+        exact this
+        field_simp
+      apply le_of_eq_of_le _ this
+      rw [mul_assoc, mul_sub, add_mul, add_mul, ← pow_two, ← pow_two, mul_comm √↑i, ← add_sub, ← sub_sub, sub_self, add_sub, add_zero, Real.sq_sqrt, Real.sq_sqrt]
+      simp
+      simp
+      exact h1
+      simp
+      field_simp
+      exact h1
+      rw [Real.sqrt_pos]
+      apply mul_pos
+      exact h0
+      exact pow_two_nonneg
+    have h_upper3 := Finset.sum_le_sum h_upper2
+    apply le_of_le_of_eq h_upper3
+    have := Finset.sum_range_sub (fun i => 4 * √i) (M (j + 1)).card
+    rw [this]
+    simp
 
   -- Cauchy-Schwarz：∑ sqrt(m_j) ≤ sqrt(k * n)
   have Hsum : ∑ j in Finset.range k, Real.sqrt ((M (j+1)).card)
