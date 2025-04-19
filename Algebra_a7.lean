@@ -1,5 +1,11 @@
 import Mathlib
 
+theorem h_eq (n : ℕ) (n_pos : 0 < n) (a : ℕ → ℝ) (ha : ∀ i, a i ∈ Set.Icc 1 8)
+  (M : Finset ℕ) (hM : M = (Finset.range n).filter (fun i => a i ∈ Set.Ioc 2 4))
+: ∑ i ∈ M, ((Finset.filter (fun l => l ∈ M) (Finset.range (i + 1))).card)
+  = ∑ i ∈ Finset.range (M.card), (i + 1) := by
+  sorry
+
 theorem Algebra_a7 (n k : ℕ) (a : ℕ → ℝ) (n_pos : 0 < n) (k_pos : 0 < k) (ha : ∀ i, a i ∈ Set.Icc 1 (2^k)) :
   ∑ i in Finset.range n, a i / Real.sqrt (∑ j in Finset.range (i + 1), (a j)^2) ≤ 4 * Real.sqrt (k * n) := by
   -- 定义 M_j：a_i 落在 [2^{j-1}, 2^j] 的 i 的集合
