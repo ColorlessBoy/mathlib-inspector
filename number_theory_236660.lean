@@ -144,7 +144,6 @@ theorem number_theory_236660 (a : ℕ → ℕ) (ha : ∀ m, a m = (2^(2*m + 1))^
           rw [ht] at h5q
           simp at h5q
           rw [ht, Finset.singleton_inj, h5q]
-
       have h_5powp1 (k: ℕ) : 5 ^ k - 1 = 4 * ∑ i ∈ Finset.range k, 5 ^ i := by
         induction k with
         | zero =>
@@ -203,24 +202,70 @@ theorem number_theory_236660 (a : ℕ → ℕ) (ha : ∀ m, a m = (2^(2*m + 1))^
           have : 5 ^ e ≠ 0 := Nat.not_eq_zero_of_lt this
           rw [← Nat.sub_one_add_one this, hf]
           ring
-        have hf3 : (2 * f + 1) = (2 ^ x - 1) := by sorry -- unique odd
-        have hf4 : 5 ^ e + 1 = 2 * (2 ^ x - 1) := by
-          rw [← hf3]
-          exact hf2
-        have h4eq2: 4 = 2 * 2 := by norm_num
-        have hf5 : 5 ^ e - 1 = 2 * (2 ^ x - 2) := by
-          have : 2 * f = 2 ^ x - 2 := by
-            rw [← Nat.add_sub_cancel (2 * f) 1, hf3, ← Nat.sub_add_eq]
-          rw [hf, h4eq2, mul_assoc, this]
-        rw [hf4, hf5] at he2
-        ring_nf at he2
-        rw [mul_assoc, mul_assoc] at he2
-        have : (2 ^ x * 2) = (2 ^ x - 2) * 4 := by
-          apply Nat.mul_left_cancel _ he2
+        have hf3 : (2 * f + 1) ∣ (2 ^ x - 1) := by sorry -- unique odd
+        have ⟨k, hk⟩ := hf3
+        have hf4 : k * 2 ^ (x + 1) = 8 * f := by
+          rw [hk, hf, hf2, mul_comm (4 * f), mul_comm 2 (2 * f + 1), mul_assoc, mul_assoc, Nat.mul_left_cancel_iff (Nat.add_one_pos (2 * f)), ← mul_assoc 2] at he2
+          exact he2
+        have hf5 : k * 2 ^ (x - 1) = 2 * f := by
+          apply Nat.mul_left_cancel (show 0 < 4 by norm_num)
+          rw [← mul_assoc 4 2, (show 4 * 2 = 8 by norm_num), ← hf4, ← mul_assoc, mul_comm 4, mul_assoc, (show 4 = 2^2 by norm_num), ← pow_add, ← Nat.add_sub_assoc (show 1 < 2 by norm_num), add_comm, ← Nat.sub_add_comm (by omega), Nat.add_sub_assoc, (show 2 - 1 = 1 by norm_num)]
+          simp
+          norm_num
+        rw [← hf5] at hf3
+        have hf6 : k * 2 ^ (x - 1) + 1 ≤ 2 ^ x - 1 := by
+          apply Nat.le_of_dvd _ hf3
+          simp
+          apply Nat.not_eq_zero_of_lt hx_ge3
+        have hk2 : k = 1 := by
+          have : ¬ k = 1 → k = 0 ∨ k ≥ 2 := by omega
+          by_contra h
+          apply this at h
+          apply h.elim
+          · intro hk0
+            rw [hk0, mul_zero] at hk
+            have : x = 0 := by omega
+            omega
+          intro hkge2
+          have h : k * 2 ^ (x - 1) + 1 ≥ 2 * 2 ^ (x - 1) + 1 := by
+            apply Nat.succ_le_succ
+            apply Nat.mul_le_mul_right
+            exact hkge2
+          rw [mul_comm 2, ← Nat.pow_add_one, Nat.sub_one_add_one (Nat.not_eq_zero_of_lt hx_ge3)] at h
+          have := le_trans h hf6
           omega
-        have : 2 ^ x = 4 := by omega
-        have : x = 2 := by
-          apply (pow_right_inj₀ (a := 2) (m := x) (n := 2) (by simp) (by simp)).mp this
+        rw [hk2, one_mul] at hf3
+        obtain ⟨r, hr⟩ := hf3
+        have hr1 : r < 2 := by
+          by_contra h
+          push_neg at h
+          have : (2 ^ (x - 1) + 1) * r ≥ (2 ^ (x - 1) + 1) * 2 := by
+            apply Nat.mul_le_mul_left
+            exact h
+          rw [← hr, add_mul, ← Nat.pow_add_one, one_mul, Nat.sub_one_add_one (Nat.not_eq_zero_of_lt hx_ge3)] at this
+          omega
+        have hr2 : r > 1 := by
+          have : 2 ^ x - 1 > (2 ^ (x - 1) + 1) := by
+            have := Nat.mul_lt_mul_left (show 0 < 2 by norm_num) (b:=(2 ^ (x - 1) + 1)) (c:=2 ^ x - 1)
+            apply this.mp
+            rw [mul_add, mul_one, mul_comm, ← Nat.pow_add_one, Nat.sub_one_add_one, Nat.mul_sub, mul_one, two_mul, Nat.add_sub_assoc]
+            apply Nat.add_lt_add_left
+            nth_rw 1 [(show 2 = 2 ^ 2 - 2 by norm_num)]
+            apply Nat.sub_lt_sub_right
+            norm_num
+            · rw [Nat.pow_lt_pow_iff_right]
+              exact hx_ge3
+              norm_num
+            nth_rw 1 [← Nat.pow_one 2]
+            rw [Nat.pow_le_pow_iff_right]
+            apply le_trans (by norm_num) hx_ge3
+            norm_num
+            apply Nat.not_eq_zero_of_lt hx_ge3
+          rw [hr] at this
+          nth_rw 2 [← mul_one (2 ^ (x - 1) + 1)] at this
+          have hpos: (2 ^ (x - 1) + 1) > 0 := by apply Nat.add_one_pos
+          have h := (Nat.mul_lt_mul_left hpos).mp this
+          exact h
         omega
       -- hq5 : p.primeFactors = {5}
       intro hq5
@@ -259,22 +304,72 @@ theorem number_theory_236660 (a : ℕ → ℕ) (ha : ∀ m, a m = (2^(2*m + 1))^
         have : 5 ^ e ≠ 0 := Nat.not_eq_zero_of_lt this
         rw [← Nat.sub_one_add_one this, hf]
         ring
-      have hf3 : (2 * f + 1) = (2 ^ x + 1) := by sorry -- unique odd
-      have hf4 : 5 ^ e + 1 = 2 * (2 ^ x + 1) := by
-        rw [← hf3]
-        exact hf2
-      have h4eq2: 4 = 2 * 2 := by norm_num
-      have hf5 : 5 ^ e - 1 = 2 * 2 ^ x := by
-        have : 2 * f = 2 ^ x := by
-          rw [← Nat.add_sub_cancel (2 * f) 1, hf3, Nat.add_sub_cancel]
-        rw [hf, h4eq2, mul_assoc, this]
-      rw [hf4, hf5] at he2
-      ring_nf at he2
-      have : 2 ^ x * 2 + 2 ^ (x * 2) * 2 = 0 := by
+      have hf3 : (2 * f + 1) ∣ (2 ^ x + 1) := by sorry -- unique odd
+      have ⟨k, hk⟩ := hf3
+      have hf4 : k * 2 ^ (x + 1) = 8 * f := by
+        rw [hk, hf, hf2, mul_comm (4 * f), mul_comm 2 (2 * f + 1), mul_assoc, mul_assoc, Nat.mul_left_cancel_iff (Nat.add_one_pos (2 * f)), ← mul_assoc 2] at he2
+        exact he2
+      have hf5 : k * 2 ^ (x - 1) = 2 * f := by
+        apply Nat.mul_left_cancel (show 0 < 4 by norm_num)
+        rw [← mul_assoc 4 2, (show 4 * 2 = 8 by norm_num), ← hf4, ← mul_assoc, mul_comm 4, mul_assoc, (show 4 = 2^2 by norm_num), ← pow_add, ← Nat.add_sub_assoc (show 1 < 2 by norm_num), add_comm, ← Nat.sub_add_comm (by omega), Nat.add_sub_assoc, (show 2 - 1 = 1 by norm_num)]
+        simp
+        norm_num
+      rw [← hf5] at hf3
+      have hf6 : k * 2 ^ (x - 1) + 1 ≤ 2 ^ x + 1 := by
+        apply Nat.le_of_dvd _ hf3
+        simp
+      have hk2 : k = 1 ∨ k = 2 := by
+        have : ¬ (k = 1 ∨ k = 2) → k = 0 ∨ k ≥ 3 := by omega
+        by_contra h
+        apply this at h
+        apply h.elim
+        · intro hk0
+          rw [hk0, mul_zero] at hk
+          have : x = 0 := by omega
+          omega
+        intro hkge2
+        have h : k * 2 ^ (x - 1) + 1 > 2 * 2 ^ (x - 1) + 1 := by
+          apply Nat.succ_lt_succ
+          rw [Nat.mul_lt_mul_right]
+          exact hkge2
+          apply Nat.pow_pos (by norm_num)
+        have := lt_of_lt_of_le h hf6
+        rw [mul_comm 2, ← Nat.pow_add_one, Nat.sub_one_add_one (Nat.not_eq_zero_of_lt hx_ge3)] at this
         omega
-      have heq : 2 ^ x = 0 := by omega
-      have hne: 2 ^ x ≠ 0 := by norm_num
-      exact hne heq
+      apply hk2.elim
+      intro hk2
+      rw [hk2, one_mul] at hf3
+      obtain ⟨r, hr⟩ := hf3
+      have hr1 : r < 2 := by
+        by_contra h
+        push_neg at h
+        have : (2 ^ (x - 1) + 1) * r ≥ (2 ^ (x - 1) + 1) * 2 := by
+          apply Nat.mul_le_mul_left
+          exact h
+        rw [← hr, add_mul, ← Nat.pow_add_one, one_mul, Nat.sub_one_add_one (Nat.not_eq_zero_of_lt hx_ge3)] at this
+        omega
+      have hr2 : r > 1 := by
+        have : 2 ^ x + 1 > (2 ^ (x - 1) + 1) := by
+          apply Nat.succ_lt_succ
+          rw [Nat.pow_lt_pow_iff_right]
+          norm_num
+          apply lt_of_lt_of_le (by norm_num) hx_ge3
+          norm_num
+        rw [hr] at this
+        nth_rw 2 [← mul_one (2 ^ (x - 1) + 1)] at this
+        have hpos: (2 ^ (x - 1) + 1) > 0 := by apply Nat.add_one_pos
+        have h := (Nat.mul_lt_mul_left hpos).mp this
+        exact h
+      omega
+      intro hkeq2
+      rw [hf, hf2, (show 4 = 2 * 2 by norm_num), mul_assoc 2 2 f, ← hf5, hkeq2, mul_comm 2 (2 ^ (x - 1)), ← Nat.pow_add_one, Nat.sub_one_add_one (show x ≠ 0 by apply Nat.not_eq_zero_of_lt hx_ge3)] at he2
+      ring_nf at he2
+      have : 2 ^ x = 0 := by omega
+      have : 2 ^ x ≠ 0 := by
+        apply Nat.not_eq_zero_of_lt
+        apply Nat.one_le_pow
+        norm_num
+      omega
     exact Nat.not_le.2 this hle
   -- Main Goal2: x ∈ {0, 1, 2} → x ∈ {m | 0 ≤ m ∧ (a m).primeFactors.card ≤ 2}
   intro h1
