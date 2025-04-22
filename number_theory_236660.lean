@@ -163,9 +163,141 @@ theorem number_theory_236660 (a : ℕ → ℕ) (ha : ∀ m, a m = (2^(2*m + 1))^
         rw [Finset.sum_nat_mod, Finset.sum_congr (by rfl) h_all_odd, Finset.sum_const, Finset.card_range]
         simp
       apply h_singleton_of_porq.elim
-      -- hq5 : p.primeFactors = {5}
+
+      -- hp5 : p.primeFactors = {5}
       · intro hp5
-        have hqpowof5 : ∃ t, 2 ^ (2 * x + 1) + 1 - 2 ^ (x + 1) = 5 ^ t := by sorry --singleton {5}
+        have hqpowof5 : ∃ t, 2 ^ (2 * x + 1) + 1 + 2 ^ (x + 1) = 5 ^ t := by
+          rw [← Nat.support_factorization] at hp5
+          have h := subset_of_eq hp5
+          rw [Finsupp.support_subset_singleton] at h
+          have : p ≠ 0 := by
+            unfold p
+            rw [Nat.add_right_comm]
+            apply Nat.succ_ne_zero
+          have h2 := Nat.eq_pow_of_factorization_eq_single this h
+          use p.factorization 5
+        obtain ⟨t, ht⟩ := hqpowof5
+        have h0 : 2 ^ (2 * x + 1) + 1 + 2 ^ (x + 1) - 1 = (2 ^ x + 1) * 2 ^ (x + 1) := by
+          rw [Nat.add_right_comm, Nat.add_sub_cancel, two_mul, add_assoc, pow_add, ← Nat.add_one_mul]
+        have h2 : 8 ∣ 2 ^ (2 * x + 1) + 1 + 2 ^ (x + 1) - 1 := by
+          rw [h0]
+          have : ∃ y, x = 3 + y := by
+            use x - 3
+            rw [Nat.add_sub_cancel' hx_ge3]
+          obtain ⟨y, hy⟩ := this
+          rw [mul_comm, hy, add_assoc, pow_add, mul_assoc]
+          simp
+        have h_even_of_sum : 2 ∣ ∑ i ∈ Finset.range t, 5 ^ i := by
+          apply Nat.dvd_of_mul_dvd_mul_left (show 0 < 4 by simp)
+          simp
+          rw [← h_5powp1, ← ht]
+          exact h2
+        have h_sum_mod : (∑ i in Finset.range t, 5 ^ i) % 2 = 0 := Nat.dvd_iff_mod_eq_zero.mp h_even_of_sum
+        have h_odd_of_t := h_odd_pow5 t
+        rw [h_sum_mod] at h_odd_of_t
+        have h_t_eq_2e : ∃ e, t = 2 * e := by
+          use t / 2
+          apply Eq.symm
+          apply Nat.mul_div_cancel'
+          apply Nat.dvd_iff_mod_eq_zero.mpr h_odd_of_t.symm
+        obtain ⟨e, he⟩ := h_t_eq_2e
+        have he2 : (2 ^ x + 1) * 2 ^ (x + 1) = (5 ^ e - 1) * (5 ^ e + 1) := by
+          rw [← h0, ht, he, mul_comm (5 ^ e - 1), ← Nat.pow_two_sub_pow_two, one_pow, mul_comm, pow_mul]
+        have he4 : 4 ∣ 5 ^ e - 1 := by rw [h_5powp1]; apply Nat.dvd_mul_right
+        obtain ⟨f, hf⟩ := he4
+        have hf2 : 5 ^ e + 1 = 2 * (2 * f + 1) := by
+          have := Nat.pow_pos (a := 5) (n := e) (by norm_num)
+          have : 5 ^ e ≠ 0 := Nat.not_eq_zero_of_lt this
+          rw [← Nat.sub_one_add_one this, hf]
+          ring
+        have hf3 : (2 * f + 1) ∣ (2 ^ x + 1) := by
+          apply Nat.Coprime.dvd_of_dvd_mul_right (n := 2 ^ (x + 1))
+          rw [Nat.coprime_pow_right_iff]
+          norm_num
+          apply Nat.add_one_pos
+          use 2 * (4 * f)
+          rw [← hf, ← mul_assoc, mul_comm _ 2, ← hf2, he2, mul_comm]
+        have ⟨k, hk⟩ := hf3
+        have hf4 : k * 2 ^ (x + 1) = 8 * f := by
+          rw [hk, hf, hf2, mul_comm (4 * f), mul_comm 2 (2 * f + 1), mul_assoc, mul_assoc, Nat.mul_left_cancel_iff (Nat.add_one_pos (2 * f)), ← mul_assoc 2] at he2
+          exact he2
+        have hf5 : k * 2 ^ (x - 1) = 2 * f := by
+          apply Nat.mul_left_cancel (show 0 < 4 by norm_num)
+          rw [← mul_assoc 4 2, (show 4 * 2 = 8 by norm_num), ← hf4, ← mul_assoc, mul_comm 4, mul_assoc, (show 4 = 2^2 by norm_num), ← pow_add, ← Nat.add_sub_assoc (show 1 < 2 by norm_num), add_comm, ← Nat.sub_add_comm (by omega), Nat.add_sub_assoc, (show 2 - 1 = 1 by norm_num)]
+          simp
+          norm_num
+        rw [← hf5] at hf3
+        have hf6 : k * 2 ^ (x - 1) + 1 ≤ 2 ^ x + 1 := by
+          apply Nat.le_of_dvd _ hf3
+          simp
+        have hk2 : k = 1 ∨ k = 2 := by
+          have : ¬ (k = 1 ∨ k = 2) → k = 0 ∨ k ≥ 3 := by omega
+          by_contra h
+          apply this at h
+          apply h.elim
+          · intro hk0
+            rw [hk0, mul_zero] at hk
+            have : x = 0 := by omega
+            omega
+          intro hkge2
+          have h : k * 2 ^ (x - 1) + 1 > 2 * 2 ^ (x - 1) + 1 := by
+            apply Nat.succ_lt_succ
+            rw [Nat.mul_lt_mul_right]
+            exact hkge2
+            apply Nat.pow_pos (by norm_num)
+          have := lt_of_lt_of_le h hf6
+          rw [mul_comm 2, ← Nat.pow_add_one, Nat.sub_one_add_one (Nat.not_eq_zero_of_lt hx_ge3)] at this
+          omega
+        apply hk2.elim
+        intro hk2
+        rw [hk2, one_mul] at hf3
+        obtain ⟨r, hr⟩ := hf3
+        have hr1 : r < 2 := by
+          by_contra h
+          push_neg at h
+          have : (2 ^ (x - 1) + 1) * r ≥ (2 ^ (x - 1) + 1) * 2 := by
+            apply Nat.mul_le_mul_left
+            exact h
+          rw [← hr, add_mul, ← Nat.pow_add_one, one_mul, Nat.sub_one_add_one (Nat.not_eq_zero_of_lt hx_ge3)] at this
+          omega
+        have hr2 : r > 1 := by
+          have : 2 ^ x + 1 > (2 ^ (x - 1) + 1) := by
+            apply Nat.succ_lt_succ
+            rw [Nat.pow_lt_pow_iff_right]
+            norm_num
+            apply lt_of_lt_of_le (by norm_num) hx_ge3
+            norm_num
+          rw [hr] at this
+          nth_rw 2 [← mul_one (2 ^ (x - 1) + 1)] at this
+          have hpos: (2 ^ (x - 1) + 1) > 0 := by apply Nat.add_one_pos
+          have h := (Nat.mul_lt_mul_left hpos).mp this
+          exact h
+        omega
+        intro hkeq2
+        rw [hf, hf2, (show 4 = 2 * 2 by norm_num), mul_assoc 2 2 f, ← hf5, hkeq2, mul_comm 2 (2 ^ (x - 1)), ← Nat.pow_add_one, Nat.sub_one_add_one (show x ≠ 0 by apply Nat.not_eq_zero_of_lt hx_ge3)] at he2
+        ring_nf at he2
+        have : 2 ^ x = 0 := by omega
+        have : 2 ^ x ≠ 0 := by
+          apply Nat.not_eq_zero_of_lt
+          apply Nat.one_le_pow
+          norm_num
+        omega
+      -- hq5 : q.primeFactors = {5}
+      · intro hq5
+        have hqpowof5 : ∃ t, 2 ^ (2 * x + 1) + 1 - 2 ^ (x + 1) = 5 ^ t := by
+          rw [← Nat.support_factorization] at hq5
+          have h := subset_of_eq hq5
+          rw [Finsupp.support_subset_singleton] at h
+          have : q ≠ 0 := by
+            unfold q
+            rw [Nat.sub_add_comm]
+            apply Nat.succ_ne_zero
+            rw [two_mul, add_assoc, ← one_mul (2 ^ (x + 1)), pow_add 2 x (x+1)]
+            apply Nat.mul_le_mul_right
+            apply Nat.one_le_pow
+            norm_num
+          have h2 := Nat.eq_pow_of_factorization_eq_single this h
+          use q.factorization 5
         have hxp1_le : 2 ^ (x + 1) ≤ 2 ^ (2 * x + 1) := by
           apply le_of_lt (hmp1_lt x (by omega))
         obtain ⟨t, ht⟩ := hqpowof5
@@ -202,7 +334,13 @@ theorem number_theory_236660 (a : ℕ → ℕ) (ha : ∀ m, a m = (2^(2*m + 1))^
           have : 5 ^ e ≠ 0 := Nat.not_eq_zero_of_lt this
           rw [← Nat.sub_one_add_one this, hf]
           ring
-        have hf3 : (2 * f + 1) ∣ (2 ^ x - 1) := by sorry -- unique odd
+        have hf3 : (2 * f + 1) ∣ (2 ^ x - 1) := by
+          apply Nat.Coprime.dvd_of_dvd_mul_right (n := 2 ^ (x + 1))
+          rw [Nat.coprime_pow_right_iff]
+          norm_num
+          apply Nat.add_one_pos
+          use 2 * (4 * f)
+          rw [← hf, ← mul_assoc (2 * f + 1), mul_comm _ 2, ← hf2, he2, mul_comm]
         have ⟨k, hk⟩ := hf3
         have hf4 : k * 2 ^ (x + 1) = 8 * f := by
           rw [hk, hf, hf2, mul_comm (4 * f), mul_comm 2 (2 * f + 1), mul_assoc, mul_assoc, Nat.mul_left_cancel_iff (Nat.add_one_pos (2 * f)), ← mul_assoc 2] at he2
@@ -267,109 +405,6 @@ theorem number_theory_236660 (a : ℕ → ℕ) (ha : ∀ m, a m = (2^(2*m + 1))^
           have h := (Nat.mul_lt_mul_left hpos).mp this
           exact h
         omega
-      -- hq5 : p.primeFactors = {5}
-      intro hq5
-      have hqpowof5 : ∃ t, 2 ^ (2 * x + 1) + 1 + 2 ^ (x + 1) = 5 ^ t := by sorry -- singleton 5
-      obtain ⟨t, ht⟩ := hqpowof5
-      have h0 : 2 ^ (2 * x + 1) + 1 + 2 ^ (x + 1) - 1 = (2 ^ x + 1) * 2 ^ (x + 1) := by
-        rw [Nat.add_right_comm, Nat.add_sub_cancel, two_mul, add_assoc, pow_add, ← Nat.add_one_mul]
-      have h2 : 8 ∣ 2 ^ (2 * x + 1) + 1 + 2 ^ (x + 1) - 1 := by
-        rw [h0]
-        have : ∃ y, x = 3 + y := by
-          use x - 3
-          rw [Nat.add_sub_cancel' hx_ge3]
-        obtain ⟨y, hy⟩ := this
-        rw [mul_comm, hy, add_assoc, pow_add, mul_assoc]
-        simp
-      have h_even_of_sum : 2 ∣ ∑ i ∈ Finset.range t, 5 ^ i := by
-        apply Nat.dvd_of_mul_dvd_mul_left (show 0 < 4 by simp)
-        simp
-        rw [← h_5powp1, ← ht]
-        exact h2
-      have h_sum_mod : (∑ i in Finset.range t, 5 ^ i) % 2 = 0 := Nat.dvd_iff_mod_eq_zero.mp h_even_of_sum
-      have h_odd_of_t := h_odd_pow5 t
-      rw [h_sum_mod] at h_odd_of_t
-      have h_t_eq_2e : ∃ e, t = 2 * e := by
-        use t / 2
-        apply Eq.symm
-        apply Nat.mul_div_cancel'
-        apply Nat.dvd_iff_mod_eq_zero.mpr h_odd_of_t.symm
-      obtain ⟨e, he⟩ := h_t_eq_2e
-      have he2 : (2 ^ x + 1) * 2 ^ (x + 1) = (5 ^ e - 1) * (5 ^ e + 1) := by
-        rw [← h0, ht, he, mul_comm (5 ^ e - 1), ← Nat.pow_two_sub_pow_two, one_pow, mul_comm, pow_mul]
-      have he4 : 4 ∣ 5 ^ e - 1 := by rw [h_5powp1]; apply Nat.dvd_mul_right
-      obtain ⟨f, hf⟩ := he4
-      have hf2 : 5 ^ e + 1 = 2 * (2 * f + 1) := by
-        have := Nat.pow_pos (a := 5) (n := e) (by norm_num)
-        have : 5 ^ e ≠ 0 := Nat.not_eq_zero_of_lt this
-        rw [← Nat.sub_one_add_one this, hf]
-        ring
-      have hf3 : (2 * f + 1) ∣ (2 ^ x + 1) := by sorry -- unique odd
-      have ⟨k, hk⟩ := hf3
-      have hf4 : k * 2 ^ (x + 1) = 8 * f := by
-        rw [hk, hf, hf2, mul_comm (4 * f), mul_comm 2 (2 * f + 1), mul_assoc, mul_assoc, Nat.mul_left_cancel_iff (Nat.add_one_pos (2 * f)), ← mul_assoc 2] at he2
-        exact he2
-      have hf5 : k * 2 ^ (x - 1) = 2 * f := by
-        apply Nat.mul_left_cancel (show 0 < 4 by norm_num)
-        rw [← mul_assoc 4 2, (show 4 * 2 = 8 by norm_num), ← hf4, ← mul_assoc, mul_comm 4, mul_assoc, (show 4 = 2^2 by norm_num), ← pow_add, ← Nat.add_sub_assoc (show 1 < 2 by norm_num), add_comm, ← Nat.sub_add_comm (by omega), Nat.add_sub_assoc, (show 2 - 1 = 1 by norm_num)]
-        simp
-        norm_num
-      rw [← hf5] at hf3
-      have hf6 : k * 2 ^ (x - 1) + 1 ≤ 2 ^ x + 1 := by
-        apply Nat.le_of_dvd _ hf3
-        simp
-      have hk2 : k = 1 ∨ k = 2 := by
-        have : ¬ (k = 1 ∨ k = 2) → k = 0 ∨ k ≥ 3 := by omega
-        by_contra h
-        apply this at h
-        apply h.elim
-        · intro hk0
-          rw [hk0, mul_zero] at hk
-          have : x = 0 := by omega
-          omega
-        intro hkge2
-        have h : k * 2 ^ (x - 1) + 1 > 2 * 2 ^ (x - 1) + 1 := by
-          apply Nat.succ_lt_succ
-          rw [Nat.mul_lt_mul_right]
-          exact hkge2
-          apply Nat.pow_pos (by norm_num)
-        have := lt_of_lt_of_le h hf6
-        rw [mul_comm 2, ← Nat.pow_add_one, Nat.sub_one_add_one (Nat.not_eq_zero_of_lt hx_ge3)] at this
-        omega
-      apply hk2.elim
-      intro hk2
-      rw [hk2, one_mul] at hf3
-      obtain ⟨r, hr⟩ := hf3
-      have hr1 : r < 2 := by
-        by_contra h
-        push_neg at h
-        have : (2 ^ (x - 1) + 1) * r ≥ (2 ^ (x - 1) + 1) * 2 := by
-          apply Nat.mul_le_mul_left
-          exact h
-        rw [← hr, add_mul, ← Nat.pow_add_one, one_mul, Nat.sub_one_add_one (Nat.not_eq_zero_of_lt hx_ge3)] at this
-        omega
-      have hr2 : r > 1 := by
-        have : 2 ^ x + 1 > (2 ^ (x - 1) + 1) := by
-          apply Nat.succ_lt_succ
-          rw [Nat.pow_lt_pow_iff_right]
-          norm_num
-          apply lt_of_lt_of_le (by norm_num) hx_ge3
-          norm_num
-        rw [hr] at this
-        nth_rw 2 [← mul_one (2 ^ (x - 1) + 1)] at this
-        have hpos: (2 ^ (x - 1) + 1) > 0 := by apply Nat.add_one_pos
-        have h := (Nat.mul_lt_mul_left hpos).mp this
-        exact h
-      omega
-      intro hkeq2
-      rw [hf, hf2, (show 4 = 2 * 2 by norm_num), mul_assoc 2 2 f, ← hf5, hkeq2, mul_comm 2 (2 ^ (x - 1)), ← Nat.pow_add_one, Nat.sub_one_add_one (show x ≠ 0 by apply Nat.not_eq_zero_of_lt hx_ge3)] at he2
-      ring_nf at he2
-      have : 2 ^ x = 0 := by omega
-      have : 2 ^ x ≠ 0 := by
-        apply Nat.not_eq_zero_of_lt
-        apply Nat.one_le_pow
-        norm_num
-      omega
     exact Nat.not_le.2 this hle
   -- Main Goal2: x ∈ {0, 1, 2} → x ∈ {m | 0 ≤ m ∧ (a m).primeFactors.card ≤ 2}
   intro h1
